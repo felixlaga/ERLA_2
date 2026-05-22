@@ -6,7 +6,7 @@
  */
 
 import { Agent } from "@convex-dev/agent";
-import { anthropic } from "@ai-sdk/anthropic";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { components } from "../_generated/api";
 import {
   searchPapers,
@@ -54,10 +54,22 @@ When referencing information from papers, ALWAYS cite the source:
 ## First Interaction
 When starting a conversation, use getResearchContext to understand what data is available before answering questions.`;
 
-// Create the research chat agent with Claude Sonnet
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const OPENROUTER_CHAT_MODEL =
+  process.env.OPENROUTER_CHAT_MODEL || "anthropic/claude-3-5-sonnet";
+
+if (!OPENROUTER_API_KEY) {
+  throw new Error("OPENROUTER_API_KEY must be set in the Convex environment");
+}
+
+const openrouter = createOpenRouter({
+  apiKey: OPENROUTER_API_KEY,
+});
+
+// Create the research chat agent with an OpenRouter-hosted model
 export const researchChatAgent = new Agent(components.agent, {
   name: "ERLA Research Chat",
-  languageModel: anthropic("claude-sonnet-4-20250514"),
+  languageModel: openrouter(OPENROUTER_CHAT_MODEL),
   instructions: AGENT_INSTRUCTIONS,
   tools: {
     searchPapers,

@@ -1,7 +1,7 @@
 """
-Managing Agent: Intelligent branch splitting with Claude Opus.
+Managing Agent: Intelligent branch splitting with an OpenRouter-hosted model.
 
-The Managing Agent uses Claude Opus 4.5 with tool use to make autonomous
+The Managing Agent uses tool calling to make autonomous
 decisions about when and how to split research branches based on paper content,
 rather than simple context window thresholds.
 
@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ..config.loader import ManagingAgentConfig
-    from ..llm.adapters import AnthropicAdapter
+    from ..llm.adapters import OpenRouterAdapter
     from .models import Branch
 
 logger = logging.getLogger(__name__)
@@ -99,7 +99,7 @@ class SplitRecommendation:
         return cls.continue_exploring(reasoning)
 
 
-# Tool definitions for Claude - Enhanced with clustering and context tools
+# Tool definitions for OpenRouter model - Enhanced with clustering and context tools
 CLUSTER_PAPERS_TOOL = {
     "name": "cluster_papers",
     "description": """Group the papers in this branch by a specified criterion.
@@ -225,7 +225,7 @@ CONTEXT_CRITICAL_THRESHOLD = 0.90  # Strongly recommend action at 90%
 
 class ManagingAgent:
     """
-    Intelligent branch management agent using Claude Opus.
+    Intelligent branch management agent using OpenRouter managing model.
 
     The managing agent analyzes research branch content and makes
     autonomous decisions about when and how to split branches based
@@ -240,14 +240,14 @@ class ManagingAgent:
 
     def __init__(
         self,
-        llm_adapter: AnthropicAdapter,
+        llm_adapter: OpenRouterAdapter,
         config: ManagingAgentConfig | None = None,
     ):
         """
         Initialize the managing agent.
 
         Args:
-            llm_adapter: Anthropic adapter configured for Claude Opus
+            llm_adapter: OpenRouter adapter configured for the managing model
             config: Managing agent configuration
         """
         self.llm = llm_adapter
@@ -322,7 +322,7 @@ class ManagingAgent:
         """
         Evaluate a branch and make an autonomous decision about next steps.
 
-        Uses Claude Opus with tool use to analyze the research content
+        Uses OpenRouter managing model with tool use to analyze the research content
         and decide whether to continue, split, or wrap up.
 
         Args:
@@ -354,7 +354,7 @@ class ManagingAgent:
             max_turns = 5  # Prevent infinite loops
 
             for turn in range(max_turns):
-                # Call Claude Opus with tool use
+                # Call OpenRouter managing model with tool use
                 response = await self.llm.complete_with_tools_messages(
                     messages=messages,
                     tools=tools,
@@ -571,7 +571,7 @@ class ManagingAgent:
         context_status: str,
         context_warning: str | None,
     ) -> str:
-        """Build the enhanced autonomous decision prompt for Claude."""
+        """Build the enhanced autonomous decision prompt for OpenRouter model."""
 
         papers_text = "\n".join([
             f"- [{p['id']}] {p['title']} ({p['year']}) - "
@@ -851,25 +851,29 @@ async def create_managing_agent(
         Configured ManagingAgent instance
 
     Raises:
-        ValueError: If ANTHROPIC_API_KEY is not configured
+        ValueError: If OpenRouter configuration is not configured
     """
-    from ..llm.adapters import AnthropicAdapter
-    from ..settings import ANTHROPIC_API_KEY
+    from ..llm.adapters import OpenRouterAdapter
+    from ..settings import OPENROUTER_API_KEY, OPENROUTER_BASE_URL
 
     if config is None:
         from ..config.loader import ManagingAgentConfig
         config = ManagingAgentConfig()
 
-    # Validate API key is configured
-    if not ANTHROPIC_API_KEY:
+    if not OPENROUTER_API_KEY:
         raise ValueError(
-            "ANTHROPIC_API_KEY environment variable is required for the managing agent. "
+            "OPENROUTER_API_KEY environment variable is required for the managing agent. "
+            "Please set it in your environment or .env file."
+        )
+    if not OPENROUTER_BASE_URL:
+        raise ValueError(
+            "OPENROUTER_BASE_URL environment variable is required for the managing agent. "
             "Please set it in your environment or .env file."
         )
 
-    # Create adapter with Opus model
-    adapter = AnthropicAdapter(
-        api_key=ANTHROPIC_API_KEY,
+    adapter = OpenRouterAdapter(
+        api_key=OPENROUTER_API_KEY,
+        base_url=OPENROUTER_BASE_URL,
         model=config.model,
     )
 

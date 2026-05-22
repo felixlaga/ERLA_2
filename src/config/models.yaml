@@ -30,7 +30,7 @@ profiles:
       backend: openrouter
       model: upstage/solar-pro-3:free
       api_key: ${OPENROUTER_API_KEY}
-      base_url: https://openrouter.ai/api/v1
+      base_url: ${OPENROUTER_BASE_URL}
     halugate:
       backend: mock
     overseer:
@@ -43,7 +43,7 @@ profiles:
       backend: openrouter
       model: upstage/solar-pro-3:free
       api_key: ${OPENROUTER_API_KEY}
-      base_url: https://openrouter.ai/api/v1
+      base_url: ${OPENROUTER_BASE_URL}
     halugate:
       backend: local
       use_sentinel: true
@@ -59,20 +59,21 @@ profiles:
       backend: openrouter
       model: anthropic/claude-3-5-sonnet
       api_key: ${OPENROUTER_API_KEY}
-      base_url: https://openrouter.ai/api/v1
+      base_url: ${OPENROUTER_BASE_URL}
     halugate:
       backend: http
-      url: http://halugate-service:8000
+      url: ${HALUGATE_URL}
     overseer:
       max_retries: 2
       groundedness_threshold: 0.85
 
-  # Claude Haiku - fast and cheap via Anthropic API
+  # Claude Haiku - fast and cheap via OpenRouter
   dev-haiku:
     summarizer:
-      backend: anthropic
-      model: claude-haiku-4-5-20251001
-      api_key: ${ANTHROPIC_API_KEY}
+      backend: openrouter
+      model: anthropic/claude-3-haiku
+      api_key: ${OPENROUTER_API_KEY}
+      base_url: ${OPENROUTER_BASE_URL}
     halugate:
       backend: mock
     overseer:
@@ -81,9 +82,10 @@ profiles:
   # Claude Haiku with real validation
   dev-haiku-accurate:
     summarizer:
-      backend: anthropic
-      model: claude-haiku-4-5-20251001
-      api_key: ${ANTHROPIC_API_KEY}
+      backend: openrouter
+      model: anthropic/claude-3-haiku
+      api_key: ${OPENROUTER_API_KEY}
+      base_url: ${OPENROUTER_BASE_URL}
     halugate:
       backend: local
       use_sentinel: true
@@ -108,10 +110,10 @@ profiles:
       backend: openrouter
       model: upstage/solar-pro-3:free
       api_key: ${OPENROUTER_API_KEY}
-      base_url: https://openrouter.ai/api/v1
+      base_url: ${OPENROUTER_BASE_URL}
     halugate:
       backend: http
-      url: http://localhost:8000
+      url: ${HALUGATE_URL}
     overseer:
       max_retries: 2
       groundedness_threshold: 0.8
@@ -123,7 +125,7 @@ profiles:
       backend: openrouter
       model: upstage/solar-pro-3:free
       api_key: ${OPENROUTER_API_KEY}
-      base_url: https://openrouter.ai/api/v1
+      base_url: ${OPENROUTER_BASE_URL}
     halugate:
       backend: mock
     overseer:
@@ -175,7 +177,7 @@ profiles:
       backend: openrouter
       model: upstage/solar-pro-3:free
       api_key: ${OPENROUTER_API_KEY}
-      base_url: https://openrouter.ai/api/v1
+      base_url: ${OPENROUTER_BASE_URL}
     halugate:
       backend: local
       use_sentinel: true
@@ -224,12 +226,13 @@ profiles:
         initial_pool_size: 50     # fetch many, agent filters down
         min_papers_before_split: 5  # suggestion, not requirement
 
-  # Research with Claude Haiku - fast iteration via Anthropic API
+  # Research with Claude Haiku - fast iteration via OpenRouter
   research-haiku:
     summarizer:
-      backend: anthropic
-      model: claude-haiku-4-5-20251001
-      api_key: ${ANTHROPIC_API_KEY}
+      backend: openrouter
+      model: anthropic/claude-3-haiku
+      api_key: ${OPENROUTER_API_KEY}
+      base_url: ${OPENROUTER_BASE_URL}
     halugate:
       backend: mock
     overseer:
@@ -275,12 +278,13 @@ profiles:
         initial_pool_size: 30
         min_papers_before_split: 5
 
-  # Research with Claude Haiku - accurate with real HaluGate via Anthropic API
+  # Research with Claude Haiku - accurate with real HaluGate via OpenRouter
   research-haiku-accurate:
     summarizer:
-      backend: anthropic
-      model: claude-haiku-4-5-20251001
-      api_key: ${ANTHROPIC_API_KEY}
+      backend: openrouter
+      model: anthropic/claude-3-haiku
+      api_key: ${OPENROUTER_API_KEY}
+      base_url: ${OPENROUTER_BASE_URL}
     halugate:
       backend: local
       use_sentinel: true
@@ -336,10 +340,10 @@ profiles:
       backend: openrouter
       model: upstage/solar-pro-3:free
       api_key: ${OPENROUTER_API_KEY}
-      base_url: https://openrouter.ai/api/v1
+      base_url: ${OPENROUTER_BASE_URL}
     halugate:
       backend: http
-      url: ${HALUGATE_URL}  # e.g., http://<lambda-labs-ip>:8000
+      url: ${HALUGATE_URL}
     overseer:
       max_retries: 2
       groundedness_threshold: 0.8
@@ -390,7 +394,7 @@ profiles:
       backend: openrouter
       model: anthropic/claude-3-5-sonnet
       api_key: ${OPENROUTER_API_KEY}
-      base_url: https://openrouter.ai/api/v1
+      base_url: ${OPENROUTER_BASE_URL}
     halugate:
       backend: local
       use_sentinel: true
@@ -445,9 +449,10 @@ profiles:
   # arXiv only - for preprint-focused research
   research-arxiv:
     summarizer:
-      backend: anthropic
-      model: claude-haiku-4-5-20251001
-      api_key: ${ANTHROPIC_API_KEY}
+      backend: openrouter
+      model: anthropic/claude-3-haiku
+      api_key: ${OPENROUTER_API_KEY}
+      base_url: ${OPENROUTER_BASE_URL}
     halugate:
       backend: mock
     overseer:
@@ -499,9 +504,10 @@ profiles:
   # Combined - search both Semantic Scholar and arXiv, deduplicate results
   research-combined:
     summarizer:
-      backend: anthropic
-      model: claude-haiku-4-5-20251001
-      api_key: ${ANTHROPIC_API_KEY}
+      backend: openrouter
+      model: anthropic/claude-3-haiku
+      api_key: ${OPENROUTER_API_KEY}
+      base_url: ${OPENROUTER_BASE_URL}
     halugate:
       backend: mock
     overseer:
@@ -555,9 +561,10 @@ profiles:
   # Fallback mode - try Semantic Scholar first, fall back to arXiv
   research-fallback:
     summarizer:
-      backend: anthropic
-      model: claude-haiku-4-5-20251001
-      api_key: ${ANTHROPIC_API_KEY}
+      backend: openrouter
+      model: anthropic/claude-3-haiku
+      api_key: ${OPENROUTER_API_KEY}
+      base_url: ${OPENROUTER_BASE_URL}
     halugate:
       backend: mock
     overseer:

@@ -70,7 +70,7 @@ async def main(
 
     if not convex.enabled:
         logger.warning(
-            "Convex not configured. Set CONVEX_URL in .env.local to enable streaming."
+            "Convex not configured. Set CONVEX_URL in .env to enable streaming."
         )
         logger.info("Continuing without realtime streaming...")
 

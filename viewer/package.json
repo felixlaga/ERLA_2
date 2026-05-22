@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.36",
     "@convex-dev/agent": "^0.3.2",
+    "@openrouter/ai-sdk-provider": "^2.3.3",
     "ai": "^6.0.71",
     "convex": "^1.31.7",
     "react": "^19.2.0",

@@ -44,6 +44,10 @@ class SemanticScholarClient:
     def __init__(self, api_key: str | None = None):
         self.api_key = api_key or SEMANTIC_SCHOLAR_API_KEY
         self.base_url = SEMANTIC_SCHOLAR_BASE_URL
+        if not self.base_url:
+            raise ValueError(
+                "Semantic Scholar base URL required. Set SEMANTIC_SCHOLAR_BASE_URL in .env"
+            )
 
         # Set rate limit based on whether we have an API key
         rate_limit = (

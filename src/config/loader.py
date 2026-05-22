@@ -12,7 +12,7 @@ from pydantic import BaseModel
 class SummarizerConfig(BaseModel):
     """Configuration for summarizer backend."""
 
-    backend: Literal["openrouter", "anthropic", "mock"] = "openrouter"
+    backend: Literal["openrouter", "mock"] = "openrouter"
     model: str | None = None
     api_key: str | None = None
     base_url: str | None = None
@@ -64,18 +64,18 @@ class BranchConfig(BaseModel):
 
 
 class ManagingAgentConfig(BaseModel):
-    """Configuration for the Managing Agent (intelligent splitting with Claude Opus)."""
+    """Configuration for the Managing Agent."""
 
     enabled: bool = False
-    model: str = "claude-opus-4-5-20251101"
+    model: str = "anthropic/claude-3-5-sonnet"
     min_papers_before_evaluation: int = 5
     evaluation_interval: int = 2  # Evaluate every N iterations
 
 
 class ExecutionAgentConfig(BaseModel):
-    """Configuration for Execution Agents (Claude Haiku for fast operations)."""
+    """Configuration for Execution Agents."""
 
-    model: str = "claude-haiku-4-5-20251001"
+    model: str = "anthropic/claude-3-haiku"
 
 
 class ReflectionConfig(BaseModel):
@@ -261,11 +261,9 @@ def load_config_from_env() -> ProfileConfig:
     # Summarizer config
     summarizer = SummarizerConfig(
         backend="openrouter",
-        model=os.environ.get("OPENROUTER_MODEL", "upstage/solar-pro-3:free"),
+        model=os.environ.get("OPENROUTER_MODEL") or "upstage/solar-pro-3:free",
         api_key=os.environ.get("OPENROUTER_API_KEY"),
-        base_url=os.environ.get(
-            "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
-        ),
+        base_url=os.environ.get("OPENROUTER_BASE_URL"),
     )
 
     # HaluGate config - default to local for main branch
@@ -314,7 +312,7 @@ def load_config(
     """
     # Determine profile name
     if profile is None:
-        profile = os.environ.get("MODEL_PROFILE", "dev-fast")
+        profile = os.environ.get("MODEL_PROFILE") or "dev-fast"
 
     # Determine config file path
     if config_path is None:

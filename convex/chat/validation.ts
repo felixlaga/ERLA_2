@@ -7,8 +7,8 @@
 import { action, query } from "../_generated/server";
 import { v } from "convex/values";
 
-// HaluGate server URL - should be set in environment
-const HALUGATE_URL = process.env.HALUGATE_URL || "http://localhost:8000";
+// HaluGate server URL must be set in the Convex environment.
+const HALUGATE_URL = process.env.HALUGATE_URL;
 
 interface HaluGateResponse {
   groundedness_score: number;
@@ -90,6 +90,11 @@ export const validateResponse = action({
 
     if (!context) {
       console.log("[validateResponse] No context available for validation");
+      return null;
+    }
+
+    if (!HALUGATE_URL) {
+      console.error("[validateResponse] HALUGATE_URL is not configured");
       return null;
     }
 

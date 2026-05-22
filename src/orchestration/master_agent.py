@@ -919,19 +919,24 @@ class ResearchSession:
         # Set up managing agent if requested
         if self._use_managing_agent:
             from .managing_agent import ManagingAgent
-            from ..llm.adapters import AnthropicAdapter
-            from ..settings import ANTHROPIC_API_KEY
+            from ..llm.adapters import OpenRouterAdapter
+            from ..settings import OPENROUTER_API_KEY, OPENROUTER_BASE_URL
 
-            # Validate API key before creating adapter
-            if not ANTHROPIC_API_KEY:
+            if not OPENROUTER_API_KEY:
                 raise ValueError(
-                    "ANTHROPIC_API_KEY environment variable is required when using the managing agent. "
+                    "OPENROUTER_API_KEY environment variable is required when using the managing agent. "
+                    "Please set it in your environment or .env file, or set use_managing_agent=False."
+                )
+            if not OPENROUTER_BASE_URL:
+                raise ValueError(
+                    "OPENROUTER_BASE_URL environment variable is required when using the managing agent. "
                     "Please set it in your environment or .env file, or set use_managing_agent=False."
                 )
 
             managing_config = self.config.research_loop.master_agent.managing_agent
-            self._managing_agent_adapter = AnthropicAdapter(
-                api_key=ANTHROPIC_API_KEY,
+            self._managing_agent_adapter = OpenRouterAdapter(
+                api_key=OPENROUTER_API_KEY,
+                base_url=OPENROUTER_BASE_URL,
                 model=managing_config.model,
             )
             await self._managing_agent_adapter.__aenter__()

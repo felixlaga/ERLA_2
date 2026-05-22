@@ -76,7 +76,7 @@ def create_summarizer(config: SummarizerConfig) -> LLMProvider:
         config: Summarizer configuration
 
     Returns:
-        LLMProvider instance (OpenRouterAdapter, AnthropicAdapter, or Mock)
+        LLMProvider instance (OpenRouterAdapter or Mock)
 
     Raises:
         ValueError: If backend type is not supported
@@ -86,21 +86,13 @@ def create_summarizer(config: SummarizerConfig) -> LLMProvider:
 
         if not config.api_key:
             raise ValueError("OpenRouter backend requires api_key")
+        if not config.base_url:
+            raise ValueError("OpenRouter backend requires base_url")
 
         return OpenRouterAdapter(
             api_key=config.api_key,
             model=config.model,
-        )
-
-    elif config.backend == "anthropic":
-        from ..llm import AnthropicAdapter
-
-        if not config.api_key:
-            raise ValueError("Anthropic backend requires api_key")
-
-        return AnthropicAdapter(
-            api_key=config.api_key,
-            model=config.model or "claude-3-haiku-20240307",
+            base_url=config.base_url,
         )
 
     elif config.backend == "mock":

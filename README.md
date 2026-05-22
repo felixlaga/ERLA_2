@@ -51,7 +51,6 @@ We implemented HaluGate entirely in pure Python, eliminating the Docker/vLLM dep
 - **python-dotenv** (≥1.0) - Environment configuration
 - **pymupdf** (≥1.24) - PDF parsing and text extraction
 - **openai** (≥1.0) - OpenRouter API client (OpenAI-compatible)
-- **anthropic** (≥0.40) - Anthropic API client for Claude
 - **lettucedetect** (≥0.1.8) - Token-level hallucination detection
 - **transformers** (≥4.40) - HuggingFace transformers for NLI models
 - **torch** (≥2.0) - PyTorch backend for ML models
