@@ -10,6 +10,18 @@ import { api, internal } from "../_generated/api";
 import { researchChatAgent } from "./agent";
 import type { Id } from "../_generated/dataModel";
 
+type SendMessageResult = {
+  messageId: Id<"chatMessages">;
+  response: string;
+  toolCalls: Array<{ toolName: string; input: unknown; output: unknown }>;
+  citations: Array<{
+    paperId: string;
+    paperTitle: string;
+    relevantText: string;
+    groundedness: number;
+  }>;
+};
+
 // Internal mutation to create a message (called from action)
 export const createMessageInternal = internalMutation({
   args: {
@@ -131,17 +143,7 @@ export const sendMessage = action({
     sessionId: v.id("sessions"),
     message: v.string(),
   },
-  handler: async (ctx, args): Promise<{
-    messageId: Id<"chatMessages">;
-    response: string;
-    toolCalls: Array<{ toolName: string; input: unknown; output: unknown }>;
-    citations: Array<{
-      paperId: string;
-      paperTitle: string;
-      relevantText: string;
-      groundedness: number;
-    }>;
-  }> => {
+  handler: async (ctx, args): Promise<SendMessageResult> => {
     // 0. Get the agent thread ID from our chatThread
     const chatThread = await ctx.runQuery(api.chat.threads.get, {
       threadId: args.threadId,
@@ -154,7 +156,7 @@ export const sendMessage = action({
     }
 
     // 1. Store the user message
-    const userMessageId = await ctx.runMutation(
+    await ctx.runMutation(
       internal.chat.actions.createMessageInternal,
       {
         threadId: args.threadId,
@@ -193,11 +195,22 @@ User message: ${args.message}`;
       [];
     for (const step of result.steps) {
       for (const toolCall of step.toolCalls) {
+        const typedToolCall = toolCall as typeof toolCall & {
+          args?: unknown;
+          input?: unknown;
+        };
+        const toolResult = step.toolResults?.find(
+          (r) => r.toolCallId === toolCall.toolCallId
+        ) as
+          | {
+              result?: unknown;
+              output?: unknown;
+            }
+          | undefined;
         toolCalls.push({
           toolName: toolCall.toolName,
-          input: toolCall.args,
-          output: step.toolResults?.find((r) => r.toolCallId === toolCall.toolCallId)
-            ?.result,
+          input: typedToolCall.args ?? typedToolCall.input,
+          output: toolResult?.result ?? toolResult?.output,
         });
       }
     }
@@ -291,21 +304,24 @@ export const startThread = action({
     message: v.string(),
     title: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx,
+    args
+  ): Promise<SendMessageResult & { threadId: Id<"chatThreads"> }> => {
     // 1. Create an agent thread first
     const { threadId: agentThreadId } = await researchChatAgent.createThread(ctx, {
       title: args.title || args.message.slice(0, 50),
     });
 
     // 2. Create our chatThread record with the agent thread ID
-    const threadId = await ctx.runMutation(api.chat.threads.create, {
+    const threadId: Id<"chatThreads"> = await ctx.runMutation(api.chat.threads.create, {
       sessionId: args.sessionId,
       agentThreadId,
       title: args.title || args.message.slice(0, 50),
     });
 
     // 3. Send the first message
-    const result = await ctx.runAction(api.chat.actions.sendMessage, {
+    const result: SendMessageResult = await ctx.runAction(api.chat.actions.sendMessage, {
       threadId,
       sessionId: args.sessionId,
       message: args.message,

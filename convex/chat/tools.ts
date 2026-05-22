@@ -3,6 +3,14 @@ import { z } from "zod";
 import type { Id } from "../_generated/dataModel";
 import { api } from "../_generated/api";
 
+type PaperSearchResult = {
+  paperId?: string;
+  title?: string;
+  abstract?: string;
+  year?: number;
+  groundedness?: number;
+};
+
 /**
  * Tool: Search Papers
  * Full-text search across papers and summaries in the research session
@@ -48,10 +56,10 @@ Returns matching papers with titles, abstracts, and groundedness scores.`,
       return `No papers found matching "${args.query}" in this research session.`;
     }
 
-    const formatted = papers
+    const formatted = (papers as PaperSearchResult[])
       .map(
-        (p: { paperId: string; title?: string; abstract?: string; year?: number; groundedness?: number }, i: number) =>
-          `[${i + 1}] ${p.title || p.paperId}
+        (p, i: number) =>
+          `[${i + 1}] ${p.title || p.paperId || "Unknown paper"}
 Year: ${p.year || "Unknown"}
 Groundedness: ${p.groundedness ? (p.groundedness * 100).toFixed(0) + "%" : "Not validated"}
 Abstract: ${p.abstract?.slice(0, 200) || "No abstract"}...
@@ -269,7 +277,7 @@ Returns session stats, branch information, and key metrics.`,
     const branches = nodes.filter((n: { type: string }) => n.type === "branch");
     const branchTopics = branches
       .map((b: { data: { query?: string } }) => b.data.query)
-      .filter(Boolean)
+      .filter((topic: string | undefined): topic is string => Boolean(topic))
       .slice(0, 5);
 
     return `## Research Session Overview
@@ -288,7 +296,7 @@ Returns session stats, branch information, and key metrics.`,
 - **Average Hypothesis Confidence:** ${(avgConfidence * 100).toFixed(0)}%
 
 ### Research Branches
-${branchTopics.map((t: string, i: number) => `${i + 1}. ${t}`).join("\n")}
+${branchTopics.map((t, i: number) => `${i + 1}. ${t}`).join("\n")}
 
 Use the other tools to explore specific papers, summaries, or hypotheses.`;
   },

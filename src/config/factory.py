@@ -69,6 +69,30 @@ class MockHaluGate:
         return 1.0
 
 
+class NullCitationProvider:
+    """Citation provider that returns no related papers."""
+
+    async def get_citations(self, paper_id: str, limit: int = 100) -> list:
+        return []
+
+    async def get_references(self, paper_id: str, limit: int = 100) -> list:
+        return []
+
+    async def get_citations_batch(
+        self,
+        paper_ids: list[str],
+        limit_per_paper: int = 100,
+    ) -> list:
+        return []
+
+    async def get_references_batch(
+        self,
+        paper_ids: list[str],
+        limit_per_paper: int = 100,
+    ) -> list:
+        return []
+
+
 def create_summarizer(config: SummarizerConfig) -> LLMProvider:
     """Create a summarizer backend from configuration.
 
@@ -393,7 +417,6 @@ def create_paper_provider(
     from ..semantic_scholar.adapters import SemanticScholarAdapter
     from ..arxiv.adapters import ArXivAdapter
     from ..paper_sources.composite import CompositeSearchProvider
-    from ..paper_sources.bridge import ArXivCitationBridge
 
     providers: list = []
     ss_adapter: SemanticScholarAdapter | None = None
@@ -411,18 +434,26 @@ def create_paper_provider(
         providers.append(arxiv_adapter)
 
     # Determine citation provider
-    citation_provider: SemanticScholarAdapter | ArXivCitationBridge
+    citation_provider: SemanticScholarAdapter | NullCitationProvider
     if ss_adapter:
         # Semantic Scholar has native citations
         citation_provider = ss_adapter
     else:
-        # arXiv-only: need to create SS adapter for citation bridge
-        ss_for_citations = SemanticScholarAdapter(api_key=semantic_scholar_api_key)
-        citation_provider = ArXivCitationBridge(ss_for_citations)
+        # arXiv-only means no Semantic Scholar calls, including citation expansion.
+        citation_provider = NullCitationProvider()
 
     # Single provider case
     if len(providers) == 1 and config.strategy == "single":
-        search_provider = providers[0]
+        if config.providers == ["arxiv"]:
+            search_provider = CompositeSearchProvider(
+                providers=providers,
+                citation_provider=citation_provider,
+                strategy=config.strategy,
+                deduplicate=config.deduplication,
+                prefer_provider=config.prefer_provider,
+            )
+        else:
+            search_provider = providers[0]
     else:
         # Composite provider
         search_provider = CompositeSearchProvider(

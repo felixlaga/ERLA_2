@@ -28,7 +28,7 @@ profiles:
   dev-fast:
     summarizer:
       backend: openrouter
-      model: upstage/solar-pro-3:free
+      model: ${OPENROUTER_MODEL}
       api_key: ${OPENROUTER_API_KEY}
       base_url: ${OPENROUTER_BASE_URL}
     halugate:
@@ -41,7 +41,7 @@ profiles:
   dev-accurate:
     summarizer:
       backend: openrouter
-      model: upstage/solar-pro-3:free
+      model: ${OPENROUTER_MODEL}
       api_key: ${OPENROUTER_API_KEY}
       base_url: ${OPENROUTER_BASE_URL}
     halugate:
@@ -57,7 +57,7 @@ profiles:
   prod:
     summarizer:
       backend: openrouter
-      model: anthropic/claude-3-5-sonnet
+      model: ${OPENROUTER_MODEL}
       api_key: ${OPENROUTER_API_KEY}
       base_url: ${OPENROUTER_BASE_URL}
     halugate:
@@ -71,7 +71,7 @@ profiles:
   dev-haiku:
     summarizer:
       backend: openrouter
-      model: anthropic/claude-3-haiku
+      model: ${OPENROUTER_MODEL}
       api_key: ${OPENROUTER_API_KEY}
       base_url: ${OPENROUTER_BASE_URL}
     halugate:
@@ -83,7 +83,7 @@ profiles:
   dev-haiku-accurate:
     summarizer:
       backend: openrouter
-      model: anthropic/claude-3-haiku
+      model: ${OPENROUTER_MODEL}
       api_key: ${OPENROUTER_API_KEY}
       base_url: ${OPENROUTER_BASE_URL}
     halugate:
@@ -108,7 +108,7 @@ profiles:
   local-http:
     summarizer:
       backend: openrouter
-      model: upstage/solar-pro-3:free
+      model: ${OPENROUTER_MODEL}
       api_key: ${OPENROUTER_API_KEY}
       base_url: ${OPENROUTER_BASE_URL}
     halugate:
@@ -123,7 +123,7 @@ profiles:
   research-fast:
     summarizer:
       backend: openrouter
-      model: upstage/solar-pro-3:free
+      model: ${OPENROUTER_MODEL}
       api_key: ${OPENROUTER_API_KEY}
       base_url: ${OPENROUTER_BASE_URL}
     halugate:
@@ -175,7 +175,7 @@ profiles:
   research-accurate:
     summarizer:
       backend: openrouter
-      model: upstage/solar-pro-3:free
+      model: ${OPENROUTER_MODEL}
       api_key: ${OPENROUTER_API_KEY}
       base_url: ${OPENROUTER_BASE_URL}
     halugate:
@@ -230,7 +230,7 @@ profiles:
   research-haiku:
     summarizer:
       backend: openrouter
-      model: anthropic/claude-3-haiku
+      model: ${OPENROUTER_MODEL}
       api_key: ${OPENROUTER_API_KEY}
       base_url: ${OPENROUTER_BASE_URL}
     halugate:
@@ -282,7 +282,7 @@ profiles:
   research-haiku-accurate:
     summarizer:
       backend: openrouter
-      model: anthropic/claude-3-haiku
+      model: ${OPENROUTER_MODEL}
       api_key: ${OPENROUTER_API_KEY}
       base_url: ${OPENROUTER_BASE_URL}
     halugate:
@@ -338,7 +338,7 @@ profiles:
   research-remote:
     summarizer:
       backend: openrouter
-      model: upstage/solar-pro-3:free
+      model: ${OPENROUTER_MODEL}
       api_key: ${OPENROUTER_API_KEY}
       base_url: ${OPENROUTER_BASE_URL}
     halugate:
@@ -392,7 +392,7 @@ profiles:
   research-prod:
     summarizer:
       backend: openrouter
-      model: anthropic/claude-3-5-sonnet
+      model: ${OPENROUTER_MODEL}
       api_key: ${OPENROUTER_API_KEY}
       base_url: ${OPENROUTER_BASE_URL}
     halugate:
@@ -450,7 +450,7 @@ profiles:
   research-arxiv:
     summarizer:
       backend: openrouter
-      model: anthropic/claude-3-haiku
+      model: ${OPENROUTER_MODEL}
       api_key: ${OPENROUTER_API_KEY}
       base_url: ${OPENROUTER_BASE_URL}
     halugate:
@@ -498,14 +498,14 @@ profiles:
     paper_sources:
       providers: ["arxiv"]
       strategy: single
-      arxiv_categories: ["cs.LG", "cs.AI", "cs.CL", "cs.CV"]
+      arxiv_categories: null
       arxiv_rate_limit: 3.0
 
   # Combined - search both Semantic Scholar and arXiv, deduplicate results
   research-combined:
     summarizer:
       backend: openrouter
-      model: anthropic/claude-3-haiku
+      model: ${OPENROUTER_MODEL}
       api_key: ${OPENROUTER_API_KEY}
       base_url: ${OPENROUTER_BASE_URL}
     halugate:
@@ -562,7 +562,7 @@ profiles:
   research-fallback:
     summarizer:
       backend: openrouter
-      model: anthropic/claude-3-haiku
+      model: ${OPENROUTER_MODEL}
       api_key: ${OPENROUTER_API_KEY}
       base_url: ${OPENROUTER_BASE_URL}
     halugate:

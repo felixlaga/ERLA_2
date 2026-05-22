@@ -41,7 +41,7 @@ class ArXivClient:
     def __init__(
         self,
         rate_limit_seconds: float = ARXIV_RATE_LIMIT_SECONDS,
-        max_retries: int = 3,
+        max_retries: int = 0,
     ):
         """
         Initialize arXiv client.
@@ -54,7 +54,7 @@ class ArXivClient:
         self._max_retries = max_retries
         self._client = arxiv.Client(
             page_size=100,
-            delay_seconds=0,  # We handle rate limiting ourselves
+            delay_seconds=rate_limit_seconds,
             num_retries=max_retries,
         )
 

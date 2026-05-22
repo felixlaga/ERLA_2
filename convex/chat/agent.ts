@@ -69,7 +69,7 @@ const openrouter = createOpenRouter({
 // Create the research chat agent with an OpenRouter-hosted model
 export const researchChatAgent = new Agent(components.agent, {
   name: "ERLA Research Chat",
-  languageModel: openrouter(OPENROUTER_CHAT_MODEL),
+  languageModel: openrouter.chat(OPENROUTER_CHAT_MODEL),
   instructions: AGENT_INSTRUCTIONS,
   tools: {
     searchPapers,
