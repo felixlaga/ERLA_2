@@ -1,7 +1,7 @@
 [project]
-name = "ic-hack-26"
+name = "erla"
 version = "0.1.0"
-description = "Add your description here"
+description = "Epistemic research landscape agent for recursive literature exploration, source-grounded summarization, and research navigation."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -14,7 +14,7 @@ dependencies = [
     "transformers>=4.40",  # NLI model
     "torch>=2.0",  # PyTorch backend
     "pyyaml>=6.0",  # YAML config loading
-    "fastapi>=0.115",  # HTTP server for HaluGate
+    "fastapi>=0.115",  # HTTP server for HaluGate and future product API
     "uvicorn>=0.34",  # ASGI server
     "arxiv>=2.1",  # arXiv API wrapper
     "typer>=0.9",  # CLI framework

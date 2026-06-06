@@ -1,0 +1,398 @@
+# ERLA Architecture
+
+## 1. Current architecture
+
+ERLA currently has a Python package under `src/` with a CLI-first research agent prototype.
+
+Current major modules:
+
+```txt
+src/cli.py                         Typer CLI: search, fetch, profiles
+src/config/loader.py               Pydantic config models
+src/config/factory.py              backend/provider factory functions
+src/config/models.yaml             model/profile presets
+src/semantic_scholar/              Semantic Scholar client, adapter, models, protocols
+src/arxiv/                         arXiv client and adapter
+src/paper_sources/                 composite search provider and deduplication
+src/summarize.py                   LLM paper summarization
+src/halugate/                      local + HTTP HaluGate validation
+src/orchestration/                 InnerLoop, IterationLoop, MasterAgent, BranchManager, StateStore, ManagingAgent, ReflectionAgent
+src/hypothesis/                    hypothesis generation/validation
+src/context/                       context estimation and branch splitting
+src/llm/                           OpenRouter adapter and LLM protocols
+src/storage/                       Convex realtime event client
+```
+
+This architecture is valuable but not yet a production product architecture. The main missing layers are:
+
+- Product API.
+- Web dashboard.
+- Durable database.
+- Background job queue.
+- Claim-level evidence model.
+- Auth/project/session model.
+- Production-grade realtime state sync.
+
+## 2. Architectural goal
+
+Evolve ERLA from a CLI prototype into a durable online research workspace while preserving the existing research-core logic.
+
+The target system must support:
+
+- Long-running research sessions.
+- Live dashboard updates.
+- Durable project/session state.
+- Background jobs.
+- Multi-provider paper search.
+- PDF parsing and chunking.
+- Source-grounded summarization.
+- Claim extraction and validation.
+- Citation/reference graph traversal.
+- User-controlled branch exploration.
+- Exportable research artifacts.
+
+## 3. Target architecture
+
+Recommended target layout:
+
+```txt
+apps/
+  web/                            Next.js dashboard
+  api/                            FastAPI product API
+
+src/                              existing research core, kept import-compatible initially
+  config/
+  semantic_scholar/
+  arxiv/
+  paper_sources/
+  summarize.py
+  halugate/
+  orchestration/
+  hypothesis/
+  context/
+  llm/
+  storage/
+
+workers/                          background job entrypoints
+migrations/                       database migrations
+tests/                            unit and integration tests
+```
+
+Do not rewrite the existing `src` package before the product API and dashboard exist. Refactor incrementally.
+
+## 4. Runtime boundaries
+
+The intended boundary is:
+
+```txt
+frontend -> product API -> job queue -> research core -> providers/services
+                         -> database/events -> frontend
+```
+
+Rules:
+
+- The frontend must not import or call research-core Python code.
+- The API must not run long research jobs synchronously.
+- Workers may call research-core modules.
+- Research-core modules should not depend on frontend or web API code.
+- HaluGate must remain separately deployable.
+
+## 5. Backend services
+
+### 5.1 Product API
+
+Add a product API using FastAPI.
+
+Responsibilities:
+
+- Project CRUD.
+- Session CRUD.
+- Run controls.
+- Branch controls.
+- Paper, summary, claim, hypothesis retrieval.
+- Export creation.
+- Event streaming endpoint.
+
+Suggested initial location:
+
+```txt
+apps/api/
+```
+
+If keeping everything inside one Python package is easier initially, use:
+
+```txt
+src/api/
+```
+
+but keep it logically separate from `src/orchestration`.
+
+### 5.2 HaluGate service
+
+The existing `src/halugate/server.py` is a validation microservice. Keep it separate from the product API.
+
+Responsibilities:
+
+- `GET /health`
+- `POST /validate`
+- later: batched claim validation
+- later: cached validation by source hash + claim hash
+
+### 5.3 Worker service
+
+Add a worker layer for long jobs.
+
+Responsibilities:
+
+- Search papers.
+- Fetch metadata.
+- Download PDFs.
+- Parse PDFs.
+- Chunk text.
+- Generate summaries.
+- Extract claims.
+- Validate claims.
+- Traverse citations/references.
+- Generate hypotheses.
+- Generate exports.
+
+Acceptable initial job queues:
+
+- Dramatiq + Redis.
+- RQ + Redis.
+- Celery + Redis.
+- Arq + Redis.
+
+## 6. Frontend architecture
+
+Recommended stack:
+
+- Next.js.
+- TypeScript.
+- Tailwind.
+- shadcn/ui.
+- TanStack Query.
+- React Flow for the Scout tree.
+- Cytoscape.js or Sigma.js for larger citation graphs.
+
+Main pages:
+
+```txt
+/projects
+/projects/[projectId]
+/sessions/[sessionId]
+/papers/[paperId]
+/settings
+```
+
+Dashboard layout:
+
+```txt
+Top bar:
+  session query, status, run controls, export
+
+Left sidebar:
+  project/session controls, filters, branch list
+
+Center:
+  Scout tree, citation graph, timeline, claim map
+
+Right inspector:
+  selected branch/paper/claim/hypothesis
+
+Bottom drawer:
+  events, validation trace, jobs
+```
+
+## 7. Persistence
+
+The existing `StateStore` is in-memory and has only simplified JSON serialization. It is useful for a prototype but must not be the production source of truth.
+
+Use Postgres as the durable product database.
+
+Use pgvector for embeddings when semantic retrieval is added.
+
+Use object storage for:
+
+- PDFs.
+- parsed text.
+- exports.
+- large cached model outputs.
+
+Convex may stay as a realtime event sink or frontend sync layer, but the durable source of truth should be the product database unless the project intentionally standardizes on Convex for persistence too.
+
+## 8. Event model
+
+All long-running actions must emit events.
+
+Event examples:
+
+- `session_created`
+- `session_started`
+- `session_paused`
+- `session_resumed`
+- `session_cancelled`
+- `branch_created`
+- `branch_started`
+- `branch_completed`
+- `branch_pruned`
+- `search_started`
+- `papers_found`
+- `paper_selected`
+- `paper_fetched`
+- `pdf_parsed`
+- `summary_generated`
+- `summary_validated`
+- `claims_extracted`
+- `claim_validated`
+- `hypothesis_generated`
+- `agent_decision`
+- `export_created`
+- `job_failed`
+
+Every event should include:
+
+- ID.
+- Session ID.
+- Optional branch ID.
+- Optional paper ID.
+- Event type.
+- Payload.
+- Timestamp.
+- Severity.
+- Source component.
+
+## 9. Research pipeline
+
+Target pipeline:
+
+```txt
+User query
+  -> create session
+  -> create root branch
+  -> search candidate papers
+  -> select papers
+  -> fetch metadata and text
+  -> chunk papers
+  -> summarize papers
+  -> validate summaries
+  -> extract atomic claims
+  -> validate claims against evidence
+  -> store supported/weak/contradicted/speculative claims
+  -> update branch state
+  -> traverse citations/references
+  -> continue/split/prune/wrap branch
+  -> synthesize landscape
+  -> generate hypotheses and reading plan
+```
+
+## 10. Provider abstraction
+
+The existing provider abstraction is good and should be preserved.
+
+Required provider methods:
+
+- `search_papers(query, filters, limit)`
+- `fetch_papers(paper_ids)`
+- `fetch_papers_with_text(paper_ids)`
+- `get_citations(paper_id, limit)`
+- `get_references(paper_id, limit)`
+- `get_citations_batch(paper_ids, limit_per_paper)`
+- `get_references_batch(paper_ids, limit_per_paper)`
+
+Current providers:
+
+- Semantic Scholar.
+- arXiv.
+- Composite provider.
+
+Future providers:
+
+- OpenAlex.
+- Crossref.
+- PubMed.
+- DOI resolver.
+- User-uploaded PDFs.
+- Zotero library.
+
+## 11. Agent components
+
+Current agents/components:
+
+- InnerLoop.
+- IterationLoop.
+- MasterAgent.
+- BranchManager.
+- ManagingAgent.
+- ReflectionAgent.
+- HypothesisGenerator.
+
+Target additional agents/components:
+
+- SearchPlanner.
+- PaperSelector as independent component.
+- ClaimExtractor.
+- ClaimVerifier.
+- ContradictionDetector.
+- ResearchAdvisor.
+- ExportSynthesizer.
+
+## 12. API endpoints
+
+Suggested initial API:
+
+```txt
+POST   /projects
+GET    /projects
+GET    /projects/{project_id}
+
+POST   /sessions
+GET    /sessions/{session_id}
+POST   /sessions/{session_id}/start
+POST   /sessions/{session_id}/pause
+POST   /sessions/{session_id}/resume
+POST   /sessions/{session_id}/cancel
+
+GET    /sessions/{session_id}/events
+GET    /sessions/{session_id}/branches
+GET    /sessions/{session_id}/papers
+GET    /sessions/{session_id}/claims
+GET    /sessions/{session_id}/hypotheses
+
+POST   /branches/{branch_id}/continue
+POST   /branches/{branch_id}/split
+POST   /branches/{branch_id}/prune
+PATCH  /branches/{branch_id}
+
+GET    /papers/{paper_id}
+GET    /claims/{claim_id}
+GET    /hypotheses/{hypothesis_id}
+
+POST   /sessions/{session_id}/exports
+GET    /exports/{export_id}
+```
+
+## 13. Error handling
+
+Every job must have:
+
+- Retry policy.
+- Timeout.
+- Failure event.
+- User-visible error.
+- Internal error log.
+- Partial-result preservation.
+
+Never discard an entire session because one paper failed.
+
+## 14. Migration plan
+
+1. Keep current `src` import paths working.
+2. Add product API around existing research core.
+3. Add Postgres schema and repositories.
+4. Replace in-memory session state gradually.
+5. Add job queue.
+6. Add frontend dashboard.
+7. Add claim extraction and claim validation.
+8. Add exports.
+9. Only then consider deeper package reorganization.

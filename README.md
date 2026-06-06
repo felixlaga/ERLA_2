@@ -1,104 +1,218 @@
-# ERLA — Exploratory Recursive Language Agents
+# ERLA — Epistemic Research Landscape Agent
 
-## Inspiration
+ERLA is a recursive research navigator for scientific literature. It searches academic paper sources, follows citation/reference structure, summarizes papers, validates generated text against source material, and grows a branching research map through autonomous Scouts.
 
-Computers used to be machines of wonder. Today we have models capable of reasoning and synthesis that would have seemed like magic a decade ago, yet computing increasingly feels as though it's stuck on rails. Ironically, the very models that could enable open-ended exploration are held back by their tendency to hallucinate.
+The immediate product direction is not to become a generic AI writing assistant. ERLA should become a research mission-control dashboard: a system that helps researchers understand a field, inspect evidence, identify gaps and contradictions, and decide what to read or investigate next.
 
-ERLA (Exploratory Recursive Language Agents) is our attempt to bring the sense of wonder back to computing—safely. We built a system that lets AI explore scientific literature recursively and autonomously, whilst maintaining epistemic integrity at every step.
+## Current repository state
 
-![Viewer](images/viewer.png)
-![Viewer](images/menu.png)
+This repository currently contains a Python-first research core and CLI prototype.
 
-## What it does
+Implemented or partially implemented:
 
-ERLA is a recursive research agent designed to explore scientific literature whilst remaining epistemically grounded. Rather than a monolithic system, ERLA orchestrates a fleet of parallel research units called **Scouts** (implemented as Branches).
+- Paper search through Semantic Scholar.
+- Paper search through arXiv.
+- Composite multi-provider search with parallel/fallback/single strategies.
+- PDF text extraction through PyMuPDF.
+- LLM summarization through OpenRouter-compatible APIs.
+- Local and HTTP HaluGate validation.
+- Recursive research orchestration with Inner Loop, Iteration Loop, Branch Manager, Master Agent, Managing Agent, Reflection Agent, and Hypothesis generation.
+- Convex event emission client for realtime visualization.
+- Typer CLI commands for search, fetch, and profile listing.
 
-Each Scout can:
-1. **Search** Semantic Scholar for relevant papers
-2. **Summarise** papers using LLMs
-3. **Validate** every summary through token-level hallucination detection
-4. **Generate** research hypotheses from validated findings
+Not yet production-ready:
 
-The **Master Agent** monitors Scout progress and decides when to spawn new Scouts based on context utilisation and research heuristics, enabling recursive parallel exploration of the research space.
+- No full web dashboard.
+- No durable product database.
+- No user/project/session API.
+- No job queue for long research runs.
+- No claim-level evidence ledger.
+- No source-of-truth frontend architecture.
+- The CLI is still the primary interface.
 
-The key innovation is our **Captain**: a pure Python implementation of vLLM's HaluGate protocol that validates every generated token against source material using a 3-stage pipeline (Sentinel → Detector → Explainer). Only summaries achieving ≥95% groundedness pass through, ensuring epistemic integrity throughout the research process.
+## Product thesis
 
-## How we built it
+ERLA should help a researcher move from an unclear research question to:
 
-**Architecture** - 3-layer recursive system:
-- **Inner Loop**: Atomic search-summarise-validate unit
-- **Iteration Loop**: Manages iterations per branch with context tracking
-- **Master Agent**: Orchestrates branch lifecycle, splitting, and pruning
+1. A mapped research landscape.
+2. A live Scout/branch tree.
+3. A paper library.
+4. Validated paper summaries.
+5. Atomic claims linked to evidence.
+6. Gap and contradiction analysis.
+7. A reading plan.
+8. Evidence-backed research-direction recommendations.
+9. Exportable notes, citations, and review outlines.
 
-**HaluGate Implementation**:
-We implemented HaluGate entirely in pure Python, eliminating the Docker/vLLM dependency:
-1. **Sentinel**: Fact-check classifier determines if validation is needed
-2. **Detector**: LettuceDetect for token-level hallucination detection
-3. **Explainer**: NLI-based verification to filter false positives
+## Architecture summary
 
-**Key Technologies**:
-- Semantic Scholar API for paper search and full-text extraction
-- Anthropic Claude for summarisation via OpenRouter
-- LettuceDetect + ModernBERT-NLI for validation pipeline
-- PyMuPDF for PDF parsing
-- FastAPI + Convex for real-time research visualisation
+Current package layout:
 
-**Complete Library Stack**:
+```txt
+src/
+  cli.py                         Typer CLI entrypoint
+  summarize.py                   LLM paper summarization
+  config/                        Pydantic config and model profiles
+  semantic_scholar/              Semantic Scholar client, models, protocols, adapter
+  arxiv/                         arXiv client and adapter
+  paper_sources/                 composite provider and deduplication
+  halugate/                      local + HTTP hallucination validation
+  orchestration/                 recursive research loops and agents
+  hypothesis/                    hypothesis generation and validation
+  context/                       context estimation and branch splitting
+  llm/                           OpenRouter adapter and LLM protocols
+  storage/                       Convex realtime event client
+```
 
-*Core Dependencies:*
-- **httpx** (≥0.27) - Async HTTP client for API calls
-- **pydantic** (≥2.0) - Data validation and settings management
-- **python-dotenv** (≥1.0) - Environment configuration
-- **pymupdf** (≥1.24) - PDF parsing and text extraction
-- **openai** (≥1.0) - OpenRouter API client (OpenAI-compatible)
-- **lettucedetect** (≥0.1.8) - Token-level hallucination detection
-- **transformers** (≥4.40) - HuggingFace transformers for NLI models
-- **torch** (≥2.0) - PyTorch backend for ML models
-- **pyyaml** (≥6.0) - YAML configuration loading
-- **fastapi** (≥0.115) - HTTP server framework for HaluGate service
-- **uvicorn** (≥0.34) - ASGI server for FastAPI
+Target product architecture:
 
-*Development Dependencies:*
-- **pytest** (≥9.0.2) - Testing framework
-- **pytest-asyncio** (≥1.3.0) - Async test support
+```txt
+apps/web/                        Next.js dashboard
+apps/api/                        FastAPI product API
+src/                             existing research core, migrated carefully
+workers/                         background jobs
+migrations/                      database migrations
+docs or root *.md                source-of-truth product/engineering docs
+```
 
-**Branch System**:
-The Master Agent decides when to spawn child Scouts based on context utilisation hitting 80%, using intelligent splitting strategies (by_field, by_topic, by_time) to divide the research space coherently.
+The existing `src` package should be preserved as the research core for now. Do not rewrite it wholesale before the dashboard, API, durable state, and validation model are defined.
 
-## Challenges we ran into
+## Installation
 
-**Hallucination at Scale**: With embarrassingly parallel Scout spawning, a single hallucination could cascade through the entire research tree. We solved this by enforcing validation at the atomic level—no summary enters the knowledge base without passing HaluGate.
+Python requirement is currently 3.13 or newer.
 
-**Context Window Management**: Tracking context usage across recursive branches whilst deciding optimal split points required careful estimation and strategy selection.
+Recommended development setup:
 
-**Pure Python HaluGate**: Replicating vLLM's Docker-based HaluGate in pure Python required understanding the full 3-stage pipeline and correctly chaining Sentinel → LettuceDetect → NLI models with proper filtering.
+```bash
+uv sync
+```
 
-**Coordination Without Centralisation**: Enabling Scouts to explore autonomously whilst maintaining global coherence required careful state management and branch lifecycle tracking.
+Alternative:
 
-## Accomplishments that we're proud of
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
 
-- **Token-level truth**: Pure Python HaluGate achieving 95%+ groundedness on validated summaries
-- **Intelligent recursion**: Master Agent orchestrates Scout spawning based on context thresholds and research heuristics, deciding optimal split strategies (by_field, by_topic, by_time) rather than hard-coded rules
-- **Epistemic compartmentalisation**: Every Scout maintains its own validated knowledge base, preventing hallucination propagation across the research tree
-- **Full pipeline**: From user query → recursive search → validated summaries → hypotheses → visualisation
-- **Research velocity**: Parallel summarisation with configurable concurrency (up to 5 concurrent paper validations per Scout)
+## Environment variables
 
-## What we learned
+Create a local `.env` file. Do not commit secrets.
 
-**Epistemic integrity matters more than the findings themselves.** Knowing how much you can trust a model's output is as important as the output itself.
+Required for real LLM runs:
 
-Through compartmentalisation, we shifted from "better prompting" to **maintenance and development of epistemic integrity**. By validating at the atomic level (individual summaries) rather than system level (final report), we enable the best parts of emergent parallel exploration whilst ensuring every single token has foundation in scientific context.
+```bash
+OPENROUTER_API_KEY=...
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_MODEL=anthropic/claude-3-5-sonnet
+```
 
-The recursive Scout architecture taught us that **homogeneous agents with simple rules can produce complex, valuable behaviour** when given the right tools and constraints. You don't need a complex hierarchy—just good primitives and validation.
+Optional:
 
-## What's next for ERLA
+```bash
+MODEL_PROFILE=research-fast
+SEMANTIC_SCHOLAR_API_KEY=...
+HALUGATE_URL=http://localhost:8000
+HALUGATE_DEVICE=cpu
+HALUGATE_USE_SENTINEL=true
+CONVEX_URL=...
+```
 
-**Citation graph traversal**: Currently Scouts split by topic/time/field. Next: follow citation chains to discover foundational papers and recent developments automatically.
+## CLI usage
 
-**Big Loop 2**: Implement hypothesis-seeded research loops where top hypotheses from one loop become queries for a deeper investigation phase.
+The CLI is a developer/prototype interface, not the final product UX.
 
-**Cross-branch synthesis**: Enable Scouts to share insights across branches, allowing discoveries in one subtree to inform exploration in another.
+List config profiles:
 
-**Adaptive groundedness thresholds**: Dynamic thresholds based on research phase—stricter for factual claims, relaxed for hypothesis generation.
+```bash
+erla profiles
+```
 
-**Academic paper generation**: Synthesise validated findings into properly cited academic papers with automatic bibliography generation from Semantic Scholar metadata.
+Search Semantic Scholar:
+
+```bash
+erla search "wave optics gravitational wave lensing" --source semantic_scholar --limit 10
+```
+
+Search arXiv:
+
+```bash
+erla search "transformer attention" --source arxiv --arxiv-cat cs.LG --limit 10
+```
+
+Search multiple providers:
+
+```bash
+erla search "LLM reasoning" --source semantic_scholar --source arxiv --strategy parallel --limit 20
+```
+
+Fetch paper metadata:
+
+```bash
+erla fetch arxiv:2301.00001
+```
+
+Fetch with PDF text extraction when available:
+
+```bash
+erla fetch arxiv:2301.00001 --with-text
+```
+
+## HaluGate service
+
+Run validation service locally:
+
+```bash
+HALUGATE_DEVICE=cpu uvicorn src.halugate.server:app --host 0.0.0.0 --port 8000
+```
+
+The HaluGate service exposes:
+
+- `GET /health`
+- `POST /validate`
+
+For production, move heavy validation to a separately deployed service with batching, caching, timeouts, and GPU support where appropriate.
+
+## Development direction
+
+The next engineering milestone is a web dashboard MVP:
+
+1. Add FastAPI product API under `apps/api` or `src/api`.
+2. Add durable Postgres schema.
+3. Add background worker queue.
+4. Add Next.js dashboard under `apps/web`.
+5. Connect session creation to the existing `ResearchSession` / `MasterAgent` orchestration.
+6. Stream events to the dashboard.
+7. Add branch tree, paper inspector, and event log.
+8. Add claim extraction and claim evidence ledger.
+
+## Source-of-truth docs
+
+Read these files before making product or architecture changes:
+
+- `PRODUCT_SPEC.md`
+- `ARCHITECTURE.md`
+- `DATA_MODEL.md`
+- `VALIDATION_RULES.md`
+- `AGENT_RULES.md`
+- `UI_UX_SPEC.md`
+- `ROADMAP.md`
+- `CODEX.md`
+- `TESTING_STRATEGY.md`
+- `CODE_STYLE.md`
+
+## Non-goals for the next milestone
+
+Do not prioritize:
+
+- A full AI writing editor.
+- Payment system.
+- Browser extension.
+- Mobile app.
+- Enterprise admin dashboard.
+- Fancy 3D visualization before usable graph navigation.
+- Major refactors that do not unblock the dashboard or validation layer.
+
+## Core rule
+
+If ERLA produces a factual claim, that claim must eventually be decomposed, validated, and linked to source evidence. Unsupported or speculative output must be labeled as such.
