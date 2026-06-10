@@ -6,7 +6,7 @@ The immediate product direction is not to become a generic AI writing assistant.
 
 ## Current repository state
 
-This repository currently contains a Python-first research core and CLI prototype.
+This repository currently contains a Python-first research core, CLI prototype, and early realtime visualization prototype.
 
 Implemented or partially implemented:
 
@@ -18,16 +18,18 @@ Implemented or partially implemented:
 - Local and HTTP HaluGate validation.
 - Recursive research orchestration with Inner Loop, Iteration Loop, Branch Manager, Master Agent, Managing Agent, Reflection Agent, and Hypothesis generation.
 - Convex event emission client for realtime visualization.
+- Convex schema/functions under `convex/` for prototype session replay state.
+- Vite/React viewer under `viewer/` for prototype graph, event, and chat exploration.
 - Typer CLI commands for search, fetch, and profile listing.
 
 Not yet production-ready:
 
-- No full web dashboard.
+- No production web dashboard backed by the target API/database/worker architecture.
 - No durable product database.
 - No user/project/session API.
 - No job queue for long research runs.
 - No claim-level evidence ledger.
-- No source-of-truth frontend architecture.
+- No finalized source-of-truth frontend architecture.
 - The CLI is still the primary interface.
 
 ## Product thesis
@@ -62,6 +64,8 @@ src/
   context/                       context estimation and branch splitting
   llm/                           OpenRouter adapter and LLM protocols
   storage/                       Convex realtime event client
+convex/                          prototype realtime schema and functions
+viewer/                          prototype Vite/React research viewer
 ```
 
 Target product architecture:
@@ -76,6 +80,8 @@ docs or root *.md                source-of-truth product/engineering docs
 ```
 
 The existing `src` package should be preserved as the research core for now. Do not rewrite it wholesale before the dashboard, API, durable state, and validation model are defined.
+
+The existing `convex/` and `viewer/` directories are prototype realtime/viewer surfaces. They may inform the dashboard MVP, but they are not the final product API, durable database, worker layer, or source-of-truth frontend architecture.
 
 ## Installation
 
@@ -181,7 +187,7 @@ The next engineering milestone is a web dashboard MVP:
 2. Add durable Postgres schema.
 3. Add background worker queue.
 4. Add Next.js dashboard under `apps/web`.
-5. Connect session creation to the existing `ResearchSession` / `MasterAgent` orchestration.
+5. Connect session creation to the target `ResearchSession` model and existing `MasterAgent` orchestration.
 6. Stream events to the dashboard.
 7. Add branch tree, paper inspector, and event log.
 8. Add claim extraction and claim evidence ledger.
@@ -197,9 +203,9 @@ Read these files before making product or architecture changes:
 - `AGENT_RULES.md`
 - `UI_UX_SPEC.md`
 - `ROADMAP.md`
-- `CODEX.md`
 - `TESTING_STRATEGY.md`
 - `CODE_STYLE.md`
+- `CODEX.md`
 
 ## Non-goals for the next milestone
 

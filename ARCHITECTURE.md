@@ -2,7 +2,7 @@
 
 ## 1. Current architecture
 
-ERLA currently has a Python package under `src/` with a CLI-first research agent prototype.
+ERLA currently has a Python package under `src/` with a CLI-first research agent prototype, plus early Convex/Vite realtime visualization pieces.
 
 Current major modules:
 
@@ -21,12 +21,16 @@ src/hypothesis/                    hypothesis generation/validation
 src/context/                       context estimation and branch splitting
 src/llm/                           OpenRouter adapter and LLM protocols
 src/storage/                       Convex realtime event client
+convex/                            prototype realtime schema and functions
+viewer/                            prototype Vite/React research viewer
 ```
+
+The existing `convex/` and `viewer/` directories are useful prototypes for replay, graph, event, and chat exploration. They are not yet the final dashboard architecture or durable product state layer.
 
 This architecture is valuable but not yet a production product architecture. The main missing layers are:
 
 - Product API.
-- Web dashboard.
+- Production web dashboard.
 - Durable database.
 - Background job queue.
 - Claim-level evidence model.
@@ -79,6 +83,8 @@ tests/                            unit and integration tests
 ```
 
 Do not rewrite the existing `src` package before the product API and dashboard exist. Refactor incrementally.
+
+Do not treat the current `viewer/` or `convex/` prototype structure as the final frontend, API, or persistence boundary. Migrate or replace those pieces deliberately once the product API and durable state model are established.
 
 ## 4. Runtime boundaries
 

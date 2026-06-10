@@ -37,8 +37,10 @@ This repo currently has:
 - HaluGate local and HTTP validation.
 - Recursive orchestration with InnerLoop, IterationLoop, MasterAgent, BranchManager, ManagingAgent, ReflectionAgent, and Hypothesis generation.
 - Convex realtime event client.
+- Prototype Convex schema/functions under `convex/`.
+- Prototype Vite/React viewer under `viewer/`.
 
-Do not assume there is already a production dashboard, database, job queue, or API layer.
+Do not assume there is already a production dashboard, database, job queue, or API layer. Treat `viewer/` and `convex/` as prototype realtime/viewer surfaces unless the source-of-truth docs say otherwise.
 
 ## 4. Core product rule
 
@@ -105,22 +107,18 @@ Do not treat the CLI-first structure as final product architecture.
 
 ## 8. Feature implementation order
 
-Default order:
+Default order follows `ROADMAP.md`:
 
-1. Clean README and `pyproject.toml` metadata.
-2. Add product API skeleton.
-3. Add database schema.
-4. Add repository layer.
-5. Add job queue.
-6. Add frontend dashboard shell.
-7. Add session creation.
-8. Add run controls.
-9. Add event streaming.
-10. Add branch tree.
-11. Add paper list and inspector.
-12. Add claim extraction and validation.
-13. Add claim ledger.
-14. Add exports.
+1. Upload or correct the root-level source-of-truth doc bundle.
+2. Replace README and `pyproject.toml` metadata.
+3. Add product API skeleton.
+4. Add database schema and migrations.
+5. Add frontend dashboard shell.
+6. Wire session creation to the existing research loop.
+7. Add event streaming.
+8. Add paper and branch inspectors.
+9. Add claim extraction.
+10. Add claim validation.
 
 Do not skip durable state and build only UI mockups.
 
