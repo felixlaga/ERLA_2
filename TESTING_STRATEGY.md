@@ -93,6 +93,7 @@ Add or preserve tests for:
 - `InnerLoop._parse_selection_response`.
 - HaluGate `compute_groundedness`.
 - Convex client event payload construction with mocked HTTP.
+- Product API skeleton endpoints in `test_api.py`.
 
 ## 5. Agent tests
 

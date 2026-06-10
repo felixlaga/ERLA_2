@@ -1,0 +1,175 @@
+"""Tests for the ERLA product API skeleton."""
+
+from fastapi.testclient import TestClient
+
+from src.api import create_app
+from src.api.repository import InMemoryRepository
+
+
+def make_client() -> TestClient:
+    """Create an isolated API client for each test."""
+
+    return TestClient(create_app(InMemoryRepository()))
+
+
+def test_project_and_session_creation_creates_root_branch():
+    client = make_client()
+
+    project_response = client.post(
+        "/projects",
+        json={
+            "title": "Wave Optics Lensing",
+            "description": "Research workspace",
+            "field": "gravitational waves",
+        },
+    )
+    assert project_response.status_code == 201
+    project = project_response.json()
+    assert project["title"] == "Wave Optics Lensing"
+
+    session_response = client.post(
+        "/sessions",
+        json={
+            "project_id": project["id"],
+            "initial_query": "wave optics gravitational wave lensing",
+        },
+    )
+    assert session_response.status_code == 201
+    session = session_response.json()
+    assert session["project_id"] == project["id"]
+    assert session["status"] == "pending"
+
+    branches_response = client.get(f"/sessions/{session['id']}/branches")
+    assert branches_response.status_code == 200
+    branches = branches_response.json()
+    assert len(branches) == 1
+    assert branches[0]["query"] == session["initial_query"]
+    assert branches[0]["label"] == "Root"
+
+    state_response = client.get(f"/sessions/{session['id']}/state")
+    assert state_response.status_code == 200
+    state = state_response.json()
+    assert state["session"]["id"] == session["id"]
+    assert len(state["branches"]) == 1
+    assert state["papers"] == []
+    assert [event["event_type"] for event in state["events"]] == [
+        "session_created",
+        "branch_created",
+    ]
+
+
+def test_run_controls_update_session_and_branch_state():
+    client = make_client()
+    session = client.post(
+        "/sessions",
+        json={"initial_query": "LLM reasoning evaluation"},
+    ).json()
+
+    start_response = client.post(f"/sessions/{session['id']}/start")
+    assert start_response.status_code == 200
+    assert start_response.json()["status"] == "running"
+
+    branches = client.get(f"/sessions/{session['id']}/branches").json()
+    assert branches[0]["status"] == "running"
+
+    pause_response = client.post(f"/sessions/{session['id']}/pause")
+    assert pause_response.status_code == 200
+    assert pause_response.json()["status"] == "paused"
+
+    resume_response = client.post(f"/sessions/{session['id']}/resume")
+    assert resume_response.status_code == 200
+    assert resume_response.json()["status"] == "running"
+
+    cancel_response = client.post(f"/sessions/{session['id']}/cancel")
+    assert cancel_response.status_code == 200
+    assert cancel_response.json()["status"] == "cancelled"
+
+    invalid_pause_response = client.post(f"/sessions/{session['id']}/pause")
+    assert invalid_pause_response.status_code == 409
+
+    events = client.get(f"/sessions/{session['id']}/events").json()
+    event_types = [event["event_type"] for event in events]
+    assert event_types[-4:] == [
+        "session_started",
+        "session_paused",
+        "session_resumed",
+        "session_cancelled",
+    ]
+
+
+def test_branch_split_patch_and_prune():
+    client = make_client()
+    session = client.post(
+        "/sessions",
+        json={"initial_query": "retrieval augmented generation evaluation"},
+    ).json()
+    root_branch = client.get(f"/sessions/{session['id']}/branches").json()[0]
+
+    split_response = client.post(
+        f"/branches/{root_branch['id']}/split",
+        json={
+            "branches": [
+                {
+                    "query": "RAG benchmark datasets",
+                    "label": "Benchmarks",
+                    "rationale": "Separate evaluation datasets from methods.",
+                },
+                {
+                    "query": "RAG hallucination mitigation",
+                    "label": "Mitigation",
+                },
+            ]
+        },
+    )
+    assert split_response.status_code == 200
+    children = split_response.json()
+    assert len(children) == 2
+    assert {child["parent_branch_id"] for child in children} == {root_branch["id"]}
+    assert {child["depth"] for child in children} == {1}
+
+    patch_response = client.patch(
+        f"/branches/{children[0]['id']}",
+        json={"label": "Evaluation benchmarks"},
+    )
+    assert patch_response.status_code == 200
+    assert patch_response.json()["label"] == "Evaluation benchmarks"
+
+    prune_response = client.post(f"/branches/{children[1]['id']}/prune")
+    assert prune_response.status_code == 200
+    assert prune_response.json()["status"] == "pruned"
+
+    continue_pruned_response = client.post(f"/branches/{children[1]['id']}/continue")
+    assert continue_pruned_response.status_code == 409
+
+
+def test_paper_and_not_found_endpoints_are_wired():
+    client = make_client()
+    session = client.post(
+        "/sessions",
+        json={"initial_query": "citation graph exploration"},
+    ).json()
+
+    papers_response = client.get(f"/sessions/{session['id']}/papers")
+    assert papers_response.status_code == 200
+    assert papers_response.json() == []
+
+    missing_session_response = client.get("/sessions/missing")
+    assert missing_session_response.status_code == 404
+
+    missing_paper_response = client.get("/papers/missing")
+    assert missing_paper_response.status_code == 404
+
+
+def test_split_requires_at_least_one_child_branch():
+    client = make_client()
+    session = client.post(
+        "/sessions",
+        json={"initial_query": "agentic literature review"},
+    ).json()
+    root_branch = client.get(f"/sessions/{session['id']}/branches").json()[0]
+
+    response = client.post(
+        f"/branches/{root_branch['id']}/split",
+        json={"branches": []},
+    )
+    assert response.status_code == 400

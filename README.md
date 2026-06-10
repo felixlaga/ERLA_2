@@ -17,6 +17,7 @@ Implemented or partially implemented:
 - LLM summarization through OpenRouter-compatible APIs.
 - Local and HTTP HaluGate validation.
 - Recursive research orchestration with Inner Loop, Iteration Loop, Branch Manager, Master Agent, Managing Agent, Reflection Agent, and Hypothesis generation.
+- FastAPI product API skeleton under `src/api` with a temporary in-memory repository.
 - Convex event emission client for realtime visualization.
 - Convex schema/functions under `convex/` for prototype session replay state.
 - Vite/React viewer under `viewer/` for prototype graph, event, and chat exploration.
@@ -26,7 +27,7 @@ Not yet production-ready:
 
 - No production web dashboard backed by the target API/database/worker architecture.
 - No durable product database.
-- No user/project/session API.
+- The product API is skeleton-only and not connected to durable state, auth, workers, or research jobs.
 - No job queue for long research runs.
 - No claim-level evidence ledger.
 - No finalized source-of-truth frontend architecture.
@@ -53,6 +54,7 @@ Current package layout:
 ```txt
 src/
   cli.py                         Typer CLI entrypoint
+  api/                           FastAPI product API skeleton
   summarize.py                   LLM paper summarization
   config/                        Pydantic config and model profiles
   semantic_scholar/              Semantic Scholar client, models, protocols, adapter
@@ -164,6 +166,27 @@ Fetch with PDF text extraction when available:
 erla fetch arxiv:2301.00001 --with-text
 ```
 
+## Product API skeleton
+
+The product API is an early boundary for projects, sessions, branches, papers, events, and run controls. It currently uses an in-memory repository and must not be treated as durable product state.
+
+Run locally:
+
+```bash
+uvicorn src.api.app:app --reload
+```
+
+Implemented skeleton endpoints include:
+
+- `POST /projects`, `GET /projects`, `GET /projects/{project_id}`
+- `POST /sessions`, `GET /sessions`, `GET /sessions/{session_id}`
+- `POST /sessions/{session_id}/start|pause|resume|cancel`
+- `GET /sessions/{session_id}/state`
+- `GET /sessions/{session_id}/branches`, `GET /sessions/{session_id}/papers`, `GET /sessions/{session_id}/events`
+- `GET /branches/{branch_id}`, `PATCH /branches/{branch_id}`
+- `POST /branches/{branch_id}/continue|split|prune`
+- `GET /papers/{paper_id}`
+
 ## HaluGate service
 
 Run validation service locally:
@@ -181,14 +204,14 @@ For production, move heavy validation to a separately deployed service with batc
 
 ## Development direction
 
-The next engineering milestone is a web dashboard MVP:
+The next engineering milestone is a web dashboard MVP. With the API skeleton in place, the next backend work is durable state and real job execution:
 
-1. Add FastAPI product API under `apps/api` or `src/api`.
-2. Add durable Postgres schema.
+1. Add durable Postgres schema.
+2. Replace the in-memory API repository with durable repositories.
 3. Add background worker queue.
 4. Add Next.js dashboard under `apps/web`.
-5. Connect session creation to the target `ResearchSession` model and existing `MasterAgent` orchestration.
-6. Stream events to the dashboard.
+5. Connect session execution to the existing `MasterAgent` orchestration through workers.
+6. Stream durable events to the dashboard.
 7. Add branch tree, paper inspector, and event log.
 8. Add claim extraction and claim evidence ledger.
 

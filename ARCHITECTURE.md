@@ -8,6 +8,7 @@ Current major modules:
 
 ```txt
 src/cli.py                         Typer CLI: search, fetch, profiles
+src/api/                            FastAPI product API skeleton with in-memory repository
 src/config/loader.py               Pydantic config models
 src/config/factory.py              backend/provider factory functions
 src/config/models.yaml             model/profile presets
@@ -29,7 +30,7 @@ The existing `convex/` and `viewer/` directories are useful prototypes for repla
 
 This architecture is valuable but not yet a production product architecture. The main missing layers are:
 
-- Product API.
+- Production product API backed by durable repositories.
 - Production web dashboard.
 - Durable database.
 - Background job queue.
@@ -108,6 +109,8 @@ Rules:
 ### 5.1 Product API
 
 Add a product API using FastAPI.
+
+An initial skeleton currently exists under `src/api/`. It exposes project, session, branch, paper, event, and run-control endpoints against a process-local in-memory repository. This skeleton establishes the API boundary only; it does not provide durable state, auth, workers, or real research execution.
 
 Responsibilities:
 
