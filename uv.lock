@@ -289,7 +289,7 @@ wheels = [
 ]
 
 [[package]]
-name = "ic-hack-26"
+name = "erla"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

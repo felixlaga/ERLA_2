@@ -1,5 +1,5 @@
 def main():
-    print("Hello from ic-hack-26!")
+    print("ERLA - Epistemic Research Landscape Agent")
 
 
 if __name__ == "__main__":
