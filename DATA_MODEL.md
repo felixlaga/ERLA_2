@@ -640,6 +640,8 @@ For pgvector:
 paper_chunks.embedding vector index
 ```
 
+The initial schema migration creates the nullable `paper_chunks.embedding` vector column. Add the ANN vector index in a later migration once the embedding model and vector dimension are chosen.
+
 ## 6. State reconstruction
 
 The dashboard must be reconstructable from durable tables, not only realtime events.

@@ -24,6 +24,7 @@ src/llm/                           OpenRouter adapter and LLM protocols
 src/storage/                       Convex realtime event client
 convex/                            prototype realtime schema and functions
 viewer/                            prototype Vite/React research viewer
+migrations/                        initial Postgres product schema migration
 ```
 
 The existing `convex/` and `viewer/` directories are useful prototypes for replay, graph, event, and chat exploration. They are not yet the final dashboard architecture or durable product state layer.
@@ -32,7 +33,7 @@ This architecture is valuable but not yet a production product architecture. The
 
 - Production product API backed by durable repositories.
 - Production web dashboard.
-- Durable database.
+- Durable database runtime and repository layer.
 - Background job queue.
 - Claim-level evidence model.
 - Auth/project/session model.
@@ -220,6 +221,8 @@ The existing `StateStore` is in-memory and has only simplified JSON serializatio
 Use Postgres as the durable product database.
 
 Use pgvector for embeddings when semantic retrieval is added.
+
+An initial schema migration exists at `migrations/0001_initial_product_schema.sql`. It creates the product tables and indexes but is not yet wired to the API skeleton or a migration runner.
 
 Use object storage for:
 

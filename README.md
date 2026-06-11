@@ -18,6 +18,7 @@ Implemented or partially implemented:
 - Local and HTTP HaluGate validation.
 - Recursive research orchestration with Inner Loop, Iteration Loop, Branch Manager, Master Agent, Managing Agent, Reflection Agent, and Hypothesis generation.
 - FastAPI product API skeleton under `src/api` with a temporary in-memory repository.
+- Initial Postgres product schema migration under `migrations/`.
 - Convex event emission client for realtime visualization.
 - Convex schema/functions under `convex/` for prototype session replay state.
 - Vite/React viewer under `viewer/` for prototype graph, event, and chat exploration.
@@ -26,7 +27,7 @@ Implemented or partially implemented:
 Not yet production-ready:
 
 - No production web dashboard backed by the target API/database/worker architecture.
-- No durable product database.
+- No running durable product database or repository layer wired to the API.
 - The product API is skeleton-only and not connected to durable state, auth, workers, or research jobs.
 - No job queue for long research runs.
 - No claim-level evidence ledger.
@@ -204,16 +205,15 @@ For production, move heavy validation to a separately deployed service with batc
 
 ## Development direction
 
-The next engineering milestone is a web dashboard MVP. With the API skeleton in place, the next backend work is durable state and real job execution:
+The next engineering milestone is a web dashboard MVP. With the API skeleton and initial schema migration in place, remaining backend work is durable state wiring and real job execution:
 
-1. Add durable Postgres schema.
-2. Replace the in-memory API repository with durable repositories.
-3. Add background worker queue.
-4. Add Next.js dashboard under `apps/web`.
-5. Connect session execution to the existing `MasterAgent` orchestration through workers.
-6. Stream durable events to the dashboard.
-7. Add branch tree, paper inspector, and event log.
-8. Add claim extraction and claim evidence ledger.
+1. Replace the in-memory API repository with durable repositories.
+2. Add background worker queue.
+3. Add Next.js dashboard under `apps/web`.
+4. Connect session execution to the existing `MasterAgent` orchestration through workers.
+5. Stream durable events to the dashboard.
+6. Add branch tree, paper inspector, and event log.
+7. Add claim extraction and claim evidence ledger.
 
 ## Source-of-truth docs
 
