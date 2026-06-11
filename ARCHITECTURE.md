@@ -27,7 +27,7 @@ viewer/                            prototype Vite/React research viewer
 migrations/                        initial Postgres product schema migration
 ```
 
-The existing `convex/` and `viewer/` directories are useful prototypes for replay, graph, event, and chat exploration. They are not yet the final dashboard architecture or durable product state layer.
+The existing `convex/` and `viewer/` directories are useful prototypes for dashboard shell, replay, graph, event, and chat exploration. They are not yet the final dashboard architecture or durable product state layer.
 
 This architecture is valuable but not yet a production product architecture. The main missing layers are:
 
@@ -87,6 +87,8 @@ tests/                            unit and integration tests
 Do not rewrite the existing `src` package before the product API and dashboard exist. Refactor incrementally.
 
 Do not treat the current `viewer/` or `convex/` prototype structure as the final frontend, API, or persistence boundary. Migrate or replace those pieces deliberately once the product API and durable state model are established.
+
+The current dashboard shell lives in `viewer/` so it can build against the existing Vite/React setup. The target frontend architecture remains open until the project decides whether to migrate that shell to Next.js under `apps/web` or standardize on the existing viewer stack.
 
 ## 4. Runtime boundaries
 

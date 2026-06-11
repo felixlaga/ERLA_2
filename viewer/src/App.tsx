@@ -2,17 +2,17 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
-import { SessionList } from "./components/SessionList";
 import { ResearchGraph } from "./components/ResearchGraph";
 import { ChatView } from "./components/chat";
+import { DashboardShell } from "./components/dashboard/DashboardShell";
 
-type ViewMode = "list" | "graph" | "chat";
+type ViewMode = "dashboard" | "graph" | "chat";
 
 function App() {
   const [selectedSessionId, setSelectedSessionId] = useState<Id<"sessions"> | null>(
     null
   );
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [viewMode, setViewMode] = useState<ViewMode>("dashboard");
 
   // Get session details for the chat view
   const session = useQuery(
@@ -26,13 +26,12 @@ function App() {
   };
 
   const handleBack = () => {
-    setSelectedSessionId(null);
-    setViewMode("list");
+    setViewMode("dashboard");
   };
 
-  // Show session list
-  if (!selectedSessionId || viewMode === "list") {
-    return <SessionList onSelectSession={handleSelectSession} />;
+  // Show dashboard shell
+  if (!selectedSessionId || viewMode === "dashboard") {
+    return <DashboardShell onOpenSessionGraph={handleSelectSession} />;
   }
 
   // Show graph view

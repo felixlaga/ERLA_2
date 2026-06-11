@@ -95,6 +95,7 @@ Add or preserve tests for:
 - Convex client event payload construction with mocked HTTP.
 - Product API skeleton endpoints in `test_api.py`.
 - Initial database migration structure in `test_database_schema.py`.
+- Frontend dashboard shell build through `npm run build` in `viewer/`.
 
 ## 5. Agent tests
 

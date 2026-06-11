@@ -31,6 +31,7 @@ This repo currently has:
 - Typer CLI in `src/cli.py`.
 - FastAPI product API skeleton in `src/api`.
 - Initial Postgres product schema migration in `migrations/`.
+- Prototype dashboard shell in `viewer/`.
 - Config profiles in `src/config/models.yaml`.
 - Semantic Scholar provider.
 - arXiv provider.

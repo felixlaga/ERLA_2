@@ -70,6 +70,8 @@ export function useReplayController({
         return next;
       });
 
+      // This callback intentionally schedules the next animation frame.
+      // eslint-disable-next-line react-hooks/immutability
       animationFrameRef.current = requestAnimationFrame(tick);
     },
     [playbackSpeed, endTime]
@@ -101,6 +103,8 @@ export function useReplayController({
 
   // Reset when start/end times change
   useEffect(() => {
+    // Replay bounds come from graph data; local playback state must follow them.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentTime(startTime);
     setIsPlaying(false);
   }, [startTime, endTime]);

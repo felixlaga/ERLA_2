@@ -45,27 +45,26 @@ export function ResearchGraph({ sessionId, onBack }: ResearchGraphProps) {
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [isReplayMode, setIsReplayMode] = useState(false);
   const [replayTime, setReplayTime] = useState<number | null>(null);
+  const [fallbackTime] = useState(() => Date.now());
 
   // Calculate time bounds from graph node createdAt timestamps
   const timeBounds = useMemo(() => {
     if (!graphData || graphData.nodes.length === 0) {
-      const now = Date.now();
-      return { startTime: now, endTime: now };
+      return { startTime: fallbackTime, endTime: fallbackTime };
     }
     const times = graphData.nodes
       .map((n) => n.data.createdAt as number | undefined)
       .filter((t): t is number => t !== undefined);
 
     if (times.length === 0) {
-      const now = Date.now();
-      return { startTime: now, endTime: now };
+      return { startTime: fallbackTime, endTime: fallbackTime };
     }
 
     return {
       startTime: Math.min(...times),
       endTime: Math.max(...times),
     };
-  }, [graphData]);
+  }, [fallbackTime, graphData]);
 
   // Initialize replay controller
   const { state: replayState, actions: replayActions } = useReplayController({

@@ -19,6 +19,7 @@ Implemented or partially implemented:
 - Recursive research orchestration with Inner Loop, Iteration Loop, Branch Manager, Master Agent, Managing Agent, Reflection Agent, and Hypothesis generation.
 - FastAPI product API skeleton under `src/api` with a temporary in-memory repository.
 - Initial Postgres product schema migration under `migrations/`.
+- Frontend dashboard shell in the Vite/React `viewer/` prototype.
 - Convex event emission client for realtime visualization.
 - Convex schema/functions under `convex/` for prototype session replay state.
 - Vite/React viewer under `viewer/` for prototype graph, event, and chat exploration.
@@ -27,6 +28,7 @@ Implemented or partially implemented:
 Not yet production-ready:
 
 - No production web dashboard backed by the target API/database/worker architecture.
+- The current dashboard shell is not yet the final `apps/web` Next.js frontend.
 - No running durable product database or repository layer wired to the API.
 - The product API is skeleton-only and not connected to durable state, auth, workers, or research jobs.
 - No job queue for long research runs.
@@ -205,11 +207,11 @@ For production, move heavy validation to a separately deployed service with batc
 
 ## Development direction
 
-The next engineering milestone is a web dashboard MVP. With the API skeleton and initial schema migration in place, remaining backend work is durable state wiring and real job execution:
+The next engineering milestone is a web dashboard MVP. With the API skeleton, initial schema migration, and prototype dashboard shell in place, remaining work is durable state wiring, real job execution, and the final frontend architecture:
 
 1. Replace the in-memory API repository with durable repositories.
 2. Add background worker queue.
-3. Add Next.js dashboard under `apps/web`.
+3. Decide whether to migrate the dashboard shell to Next.js under `apps/web` or formalize the existing `viewer/`.
 4. Connect session execution to the existing `MasterAgent` orchestration through workers.
 5. Stream durable events to the dashboard.
 6. Add branch tree, paper inspector, and event log.

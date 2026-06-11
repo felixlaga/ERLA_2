@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useQuery, useAction, useMutation } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 
@@ -56,7 +56,6 @@ export function useStreamingChat({ sessionId, threadId }: UseStreamingChatOption
   // Actions
   const sendMessageAction = useAction(api.chat.actions.sendMessage);
   const startThreadAction = useAction(api.chat.actions.startThread);
-  const createThread = useMutation(api.chat.threads.create);
 
   // Send a message
   const sendMessage = useCallback(
@@ -92,7 +91,7 @@ export function useStreamingChat({ sessionId, threadId }: UseStreamingChatOption
 
   // Start a new thread (just clears the current thread - actual creation happens on first message)
   const startNewThread = useCallback(
-    async (_title?: string) => {
+    async () => {
       // Don't create the thread directly - let sendMessage handle it
       // This ensures the agent thread is properly created via startThreadAction
       setCurrentThreadId(null);

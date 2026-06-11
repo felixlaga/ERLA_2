@@ -25,6 +25,13 @@ export function ToolCallPanel({ toolCalls }: ToolCallPanelProps) {
     getResearchContext: { icon: "📊", color: "text-purple-400" },
   };
 
+  const formatToolValue = (value: unknown): string => {
+    if (typeof value === "string") {
+      return value;
+    }
+    return JSON.stringify(value, null, 2) ?? "";
+  };
+
   return (
     <div className="mt-3 border-t border-gray-700 pt-3">
       <button
@@ -76,19 +83,16 @@ export function ToolCallPanel({ toolCalls }: ToolCallPanelProps) {
                 <div className="mt-2">
                   <span className="text-gray-500">Input:</span>
                   <pre className="mt-1 text-gray-300 overflow-x-auto whitespace-pre-wrap">
-                    {JSON.stringify(tc.input, null, 2)}
+                    {formatToolValue(tc.input)}
                   </pre>
                 </div>
 
                 {/* Output preview */}
-                {tc.output && (
+                {tc.output !== undefined && tc.output !== null && (
                   <div className="mt-2">
                     <span className="text-gray-500">Output:</span>
                     <pre className="mt-1 text-gray-300 overflow-x-auto whitespace-pre-wrap max-h-32 overflow-y-auto">
-                      {typeof tc.output === "string"
-                        ? tc.output.slice(0, 500) +
-                          (tc.output.length > 500 ? "..." : "")
-                        : JSON.stringify(tc.output, null, 2).slice(0, 500)}
+                      {formatToolValue(tc.output).slice(0, 500)}
                     </pre>
                   </div>
                 )}
