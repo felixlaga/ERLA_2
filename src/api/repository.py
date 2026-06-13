@@ -5,6 +5,7 @@ from __future__ import annotations
 from copy import deepcopy
 from datetime import datetime, timezone
 from threading import Lock
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from .models import (
@@ -17,10 +18,15 @@ from .models import (
     Project,
     ProjectCreate,
     ResearchSession,
+    RuntimeLoopBinding,
     SessionCreate,
     SessionSnapshot,
     SessionStatus,
 )
+from .research_loop import ResearchLoopBridge
+
+if TYPE_CHECKING:
+    from ..orchestration.models import LoopState
 
 
 class RepositoryError(Exception):
@@ -44,12 +50,15 @@ def utc_now() -> datetime:
 class InMemoryRepository:
     """Process-local repository used until durable storage is added."""
 
-    def __init__(self) -> None:
+    def __init__(self, loop_bridge: ResearchLoopBridge | None = None) -> None:
         self._projects: dict[str, Project] = {}
         self._sessions: dict[str, ResearchSession] = {}
         self._branches: dict[str, Branch] = {}
         self._papers: dict[str, Paper] = {}
         self._events: dict[str, Event] = {}
+        self._runtime_loop_bindings: dict[str, RuntimeLoopBinding] = {}
+        self._runtime_loop_states: dict[str, LoopState] = {}
+        self._loop_bridge = loop_bridge or ResearchLoopBridge()
         self._lock = Lock()
 
     def create_project(self, payload: ProjectCreate) -> Project:
@@ -105,21 +114,39 @@ class InMemoryRepository:
             )
             self._sessions[session.id] = session
 
-            root_branch = Branch(
-                id=self._new_id("branch"),
+            runtime_loop = self._loop_bridge.create_loop(session)
+            root_branch = self._loop_bridge.to_api_branch(
                 session_id=session.id,
-                query=payload.initial_query,
+                runtime_branch=runtime_loop.root_branch,
                 label="Root",
                 rationale="Initial session query.",
                 created_at=now,
                 updated_at=now,
             )
             self._branches[root_branch.id] = root_branch
+            self._runtime_loop_states[session.id] = runtime_loop.state
+            self._runtime_loop_bindings[session.id] = RuntimeLoopBinding(
+                session_id=session.id,
+                loop_id=runtime_loop.state.loop_id,
+                loop_number=runtime_loop.state.loop_number,
+                root_branch_id=runtime_loop.root_branch.id,
+                created_at=now,
+                updated_at=now,
+            )
 
             self._create_event_unlocked(
                 session_id=session.id,
                 event_type="session_created",
                 payload={"initial_query": session.initial_query},
+            )
+            self._create_event_unlocked(
+                session_id=session.id,
+                event_type="research_loop_created",
+                payload={
+                    "loop_id": runtime_loop.state.loop_id,
+                    "loop_number": runtime_loop.state.loop_number,
+                    "root_branch_id": runtime_loop.root_branch.id,
+                },
             )
             self._create_event_unlocked(
                 session_id=session.id,
@@ -148,10 +175,21 @@ class InMemoryRepository:
             session = self._get_session_unlocked(session_id)
             return SessionSnapshot(
                 session=session,
+                runtime_loop=self._runtime_loop_bindings.get(session_id),
                 branches=self._list_branches_unlocked(session_id),
                 papers=self._list_papers_unlocked(session_id),
                 events=self._list_events_unlocked(session_id),
             )
+
+    def get_runtime_loop_binding(self, session_id: str) -> RuntimeLoopBinding:
+        """Get the runtime loop binding for a session."""
+
+        with self._lock:
+            self._get_session_unlocked(session_id)
+            try:
+                return self._runtime_loop_bindings[session_id]
+            except KeyError as exc:
+                raise NotFoundError("Runtime loop not found") from exc
 
     def set_session_status(
         self,
@@ -192,10 +230,20 @@ class InMemoryRepository:
                         branch.updated_at = now
                         self._branches[branch.id] = branch
 
+            event_payload = {"status": status.value}
+            binding = self._runtime_loop_bindings.get(session.id)
+            if binding:
+                event_payload.update(
+                    {
+                        "loop_id": binding.loop_id,
+                        "root_branch_id": binding.root_branch_id,
+                    }
+                )
+
             self._create_event_unlocked(
                 session_id=session.id,
                 event_type=event_type,
-                payload={"status": status.value},
+                payload=event_payload,
             )
             return session
 

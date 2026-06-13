@@ -8,7 +8,7 @@ Current major modules:
 
 ```txt
 src/cli.py                         Typer CLI: search, fetch, profiles
-src/api/                            FastAPI product API skeleton with in-memory repository
+src/api/                            FastAPI product API skeleton with in-memory repository and runtime loop bridge
 src/config/loader.py               Pydantic config models
 src/config/factory.py              backend/provider factory functions
 src/config/models.yaml             model/profile presets
@@ -113,7 +113,7 @@ Rules:
 
 Add a product API using FastAPI.
 
-An initial skeleton currently exists under `src/api/`. It exposes project, session, branch, paper, event, and run-control endpoints against a process-local in-memory repository. This skeleton establishes the API boundary only; it does not provide durable state, auth, workers, or real research execution.
+An initial skeleton currently exists under `src/api/`. It exposes project, session, branch, paper, event, and run-control endpoints against a process-local in-memory repository. Session creation creates a lightweight runtime `LoopState` and root branch via the existing orchestration models, and exposes that binding through `GET /sessions/{session_id}/loop`. This skeleton establishes the API boundary only; it does not provide durable state, auth, workers, streaming, or real research execution.
 
 Responsibilities:
 
@@ -362,6 +362,7 @@ GET    /projects/{project_id}
 
 POST   /sessions
 GET    /sessions/{session_id}
+GET    /sessions/{session_id}/loop
 POST   /sessions/{session_id}/start
 POST   /sessions/{session_id}/pause
 POST   /sessions/{session_id}/resume

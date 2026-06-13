@@ -13,6 +13,7 @@ from .models import (
     Project,
     ProjectCreate,
     ResearchSession,
+    RuntimeLoopBinding,
     SessionCreate,
     SessionSnapshot,
     SessionStatus,
@@ -113,6 +114,17 @@ def get_session_state(session_id: str, request: Request) -> SessionSnapshot:
 
     try:
         return get_repository(request).get_session_snapshot(session_id)
+    except RepositoryError as exc:
+        handle_repository_error(exc)
+        raise
+
+
+@router.get("/sessions/{session_id}/loop", response_model=RuntimeLoopBinding)
+def get_session_loop(session_id: str, request: Request) -> RuntimeLoopBinding:
+    """Get the runtime research-loop binding for a session."""
+
+    try:
+        return get_repository(request).get_runtime_loop_binding(session_id)
     except RepositoryError as exc:
         handle_repository_error(exc)
         raise

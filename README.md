@@ -17,7 +17,7 @@ Implemented or partially implemented:
 - LLM summarization through OpenRouter-compatible APIs.
 - Local and HTTP HaluGate validation.
 - Recursive research orchestration with Inner Loop, Iteration Loop, Branch Manager, Master Agent, Managing Agent, Reflection Agent, and Hypothesis generation.
-- FastAPI product API skeleton under `src/api` with a temporary in-memory repository.
+- FastAPI product API skeleton under `src/api` with a temporary in-memory repository and runtime research-loop binding.
 - Initial Postgres product schema migration under `migrations/`.
 - Frontend dashboard shell in the Vite/React `viewer/` prototype.
 - Convex event emission client for realtime visualization.
@@ -30,7 +30,7 @@ Not yet production-ready:
 - No production web dashboard backed by the target API/database/worker architecture.
 - The current dashboard shell is not yet the final `apps/web` Next.js frontend.
 - No running durable product database or repository layer wired to the API.
-- The product API is skeleton-only and not connected to durable state, auth, workers, or research jobs.
+- The product API is skeleton-only and not connected to durable state, auth, workers, streaming, or research job execution.
 - No job queue for long research runs.
 - No claim-level evidence ledger.
 - No finalized source-of-truth frontend architecture.
@@ -173,6 +173,8 @@ erla fetch arxiv:2301.00001 --with-text
 
 The product API is an early boundary for projects, sessions, branches, papers, events, and run controls. It currently uses an in-memory repository and must not be treated as durable product state.
 
+Session creation now creates a lightweight runtime `LoopState` and root branch through the existing research-core orchestration models. This binds product sessions to the current research loop shape, but it does not run long research work in API handlers and does not replace the future worker queue or durable repository.
+
 Run locally:
 
 ```bash
@@ -184,7 +186,7 @@ Implemented skeleton endpoints include:
 - `POST /projects`, `GET /projects`, `GET /projects/{project_id}`
 - `POST /sessions`, `GET /sessions`, `GET /sessions/{session_id}`
 - `POST /sessions/{session_id}/start|pause|resume|cancel`
-- `GET /sessions/{session_id}/state`
+- `GET /sessions/{session_id}/state`, `GET /sessions/{session_id}/loop`
 - `GET /sessions/{session_id}/branches`, `GET /sessions/{session_id}/papers`, `GET /sessions/{session_id}/events`
 - `GET /branches/{branch_id}`, `PATCH /branches/{branch_id}`
 - `POST /branches/{branch_id}/continue|split|prune`
@@ -207,13 +209,13 @@ For production, move heavy validation to a separately deployed service with batc
 
 ## Development direction
 
-The next engineering milestone is a web dashboard MVP. With the API skeleton, initial schema migration, and prototype dashboard shell in place, remaining work is durable state wiring, real job execution, and the final frontend architecture:
+The next engineering milestone is a web dashboard MVP. With the API skeleton, initial schema migration, prototype dashboard shell, and session-to-loop binding in place, remaining work is realtime visibility, durable state wiring, real job execution, and the final frontend architecture:
 
-1. Replace the in-memory API repository with durable repositories.
-2. Add background worker queue.
-3. Decide whether to migrate the dashboard shell to Next.js under `apps/web` or formalize the existing `viewer/`.
-4. Connect session execution to the existing `MasterAgent` orchestration through workers.
-5. Stream durable events to the dashboard.
+1. Add event streaming for session and branch activity.
+2. Replace the in-memory API repository with durable repositories.
+3. Add background worker queue.
+4. Decide whether to migrate the dashboard shell to Next.js under `apps/web` or formalize the existing `viewer/`.
+5. Connect session execution to the existing `MasterAgent` orchestration through workers.
 6. Add branch tree, paper inspector, and event log.
 7. Add claim extraction and claim evidence ledger.
 

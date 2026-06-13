@@ -144,10 +144,22 @@ class Event(BaseModel):
     created_at: datetime
 
 
+class RuntimeLoopBinding(BaseModel):
+    """Binding between a product session and runtime research-loop state."""
+
+    session_id: str
+    loop_id: str
+    loop_number: int
+    root_branch_id: str
+    created_at: datetime
+    updated_at: datetime
+
+
 class SessionSnapshot(BaseModel):
     """A reconstructable session view for dashboard clients."""
 
     session: ResearchSession
+    runtime_loop: RuntimeLoopBinding | None = None
     branches: list[Branch] = Field(default_factory=list)
     papers: list[Paper] = Field(default_factory=list)
     events: list[Event] = Field(default_factory=list)

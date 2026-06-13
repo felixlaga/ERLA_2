@@ -30,6 +30,7 @@ This repo currently has:
 - Python package under `src/`.
 - Typer CLI in `src/cli.py`.
 - FastAPI product API skeleton in `src/api`.
+- Session creation is wired to a lightweight runtime `LoopState` and root branch through `src/api/research_loop.py`.
 - Initial Postgres product schema migration in `migrations/`.
 - Prototype dashboard shell in `viewer/`.
 - Config profiles in `src/config/models.yaml`.
@@ -43,7 +44,7 @@ This repo currently has:
 - Prototype Convex schema/functions under `convex/`.
 - Prototype Vite/React viewer under `viewer/`.
 
-Do not assume there is already a production dashboard, running database, job queue, durable repository layer, or durable API layer. Treat `src/api`, `migrations/`, `viewer/`, and `convex/` as prototype/skeleton/foundation surfaces unless the source-of-truth docs say otherwise.
+Do not assume there is already a production dashboard, running database, job queue, durable repository layer, event stream, or durable API layer. Treat `src/api`, `migrations/`, `viewer/`, and `convex/` as prototype/skeleton/foundation surfaces unless the source-of-truth docs say otherwise.
 
 ## 4. Core product rule
 

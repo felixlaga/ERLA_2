@@ -93,7 +93,7 @@ Add or preserve tests for:
 - `InnerLoop._parse_selection_response`.
 - HaluGate `compute_groundedness`.
 - Convex client event payload construction with mocked HTTP.
-- Product API skeleton endpoints in `test_api.py`.
+- Product API skeleton endpoints and session-to-runtime-loop binding in `test_api.py`.
 - Initial database migration structure in `test_database_schema.py`.
 - Frontend dashboard shell build through `npm run build` in `viewer/`.
 
@@ -135,6 +135,7 @@ Once the product API exists, test:
 
 - Project CRUD.
 - Session creation.
+- Session-to-runtime-loop binding.
 - Session start/pause/resume/cancel.
 - Branch listing.
 - Paper listing.

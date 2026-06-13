@@ -39,23 +39,36 @@ def test_project_and_session_creation_creates_root_branch():
     assert session["project_id"] == project["id"]
     assert session["status"] == "pending"
 
+    loop_response = client.get(f"/sessions/{session['id']}/loop")
+    assert loop_response.status_code == 200
+    loop = loop_response.json()
+    assert loop["session_id"] == session["id"]
+    assert loop["loop_id"].startswith("loop_")
+    assert loop["loop_number"] == 1
+
     branches_response = client.get(f"/sessions/{session['id']}/branches")
     assert branches_response.status_code == 200
     branches = branches_response.json()
     assert len(branches) == 1
+    assert branches[0]["id"] == loop["root_branch_id"]
     assert branches[0]["query"] == session["initial_query"]
     assert branches[0]["label"] == "Root"
+    assert branches[0]["mode"] == "search_summarize"
 
     state_response = client.get(f"/sessions/{session['id']}/state")
     assert state_response.status_code == 200
     state = state_response.json()
     assert state["session"]["id"] == session["id"]
+    assert state["runtime_loop"]["loop_id"] == loop["loop_id"]
+    assert state["runtime_loop"]["root_branch_id"] == loop["root_branch_id"]
     assert len(state["branches"]) == 1
     assert state["papers"] == []
     assert [event["event_type"] for event in state["events"]] == [
         "session_created",
+        "research_loop_created",
         "branch_created",
     ]
+    assert state["events"][1]["payload"]["root_branch_id"] == loop["root_branch_id"]
 
 
 def test_run_controls_update_session_and_branch_state():
@@ -95,6 +108,12 @@ def test_run_controls_update_session_and_branch_state():
         "session_resumed",
         "session_cancelled",
     ]
+    loop = client.get(f"/sessions/{session['id']}/loop").json()
+    started_event = next(
+        event for event in events if event["event_type"] == "session_started"
+    )
+    assert started_event["payload"]["loop_id"] == loop["loop_id"]
+    assert started_event["payload"]["root_branch_id"] == loop["root_branch_id"]
 
 
 def test_branch_split_patch_and_prune():
@@ -155,6 +174,9 @@ def test_paper_and_not_found_endpoints_are_wired():
 
     missing_session_response = client.get("/sessions/missing")
     assert missing_session_response.status_code == 404
+
+    missing_loop_response = client.get("/sessions/missing/loop")
+    assert missing_loop_response.status_code == 404
 
     missing_paper_response = client.get("/papers/missing")
     assert missing_paper_response.status_code == 404
