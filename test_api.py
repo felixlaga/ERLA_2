@@ -1,8 +1,11 @@
 """Tests for the ERLA product API skeleton."""
 
+from queue import Empty
+
 from fastapi.testclient import TestClient
 
 from src.api import create_app
+from src.api.event_stream import format_sse_comment, format_sse_event
 from src.api.repository import InMemoryRepository
 
 
@@ -116,6 +119,46 @@ def test_run_controls_update_session_and_branch_state():
     assert started_event["payload"]["root_branch_id"] == loop["root_branch_id"]
 
 
+def test_event_stream_subscription_replays_and_publishes_events():
+    repository = InMemoryRepository()
+    client = TestClient(create_app(repository))
+    session = client.post(
+        "/sessions",
+        json={"initial_query": "live research event stream"},
+    ).json()
+
+    subscription = repository.subscribe_events(session["id"])
+    try:
+        assert [event.event_type for event in subscription.replay_events] == [
+            "session_created",
+            "research_loop_created",
+            "branch_created",
+        ]
+
+        start_response = client.post(f"/sessions/{session['id']}/start")
+        assert start_response.status_code == 200
+
+        published_event = subscription.queue.get_nowait()
+        assert published_event.event_type == "session_started"
+
+        frame = format_sse_event(published_event)
+        assert f"id: {published_event.id}" in frame
+        assert "event: session_started" in frame
+        assert '"event_type":"session_started"' in frame
+        assert frame.endswith("\n\n")
+        assert format_sse_comment("keep-alive") == ": keep-alive\n\n"
+    finally:
+        repository.unsubscribe_events(subscription)
+
+    client.post(f"/sessions/{session['id']}/pause")
+    try:
+        subscription.queue.get_nowait()
+    except Empty:
+        pass
+    else:
+        raise AssertionError("Unsubscribed event stream received an event")
+
+
 def test_branch_split_patch_and_prune():
     client = make_client()
     session = client.post(
@@ -177,6 +220,9 @@ def test_paper_and_not_found_endpoints_are_wired():
 
     missing_loop_response = client.get("/sessions/missing/loop")
     assert missing_loop_response.status_code == 404
+
+    missing_event_stream_response = client.get("/sessions/missing/events/stream")
+    assert missing_event_stream_response.status_code == 404
 
     missing_paper_response = client.get("/papers/missing")
     assert missing_paper_response.status_code == 404

@@ -2,8 +2,17 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request, status
+import asyncio
+from queue import Empty
 
+from fastapi import APIRouter, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
+
+from .event_stream import (
+    EVENT_STREAM_MEDIA_TYPE,
+    format_sse_comment,
+    format_sse_event,
+)
 from .models import (
     Branch,
     BranchPatch,
@@ -301,3 +310,58 @@ def list_session_events(session_id: str, request: Request) -> list[Event]:
     except RepositoryError as exc:
         handle_repository_error(exc)
         raise
+
+
+@router.get("/sessions/{session_id}/events/stream")
+async def stream_session_events(
+    session_id: str,
+    request: Request,
+    replay: bool = True,
+    heartbeat_seconds: float = 15.0,
+) -> StreamingResponse:
+    """Stream session events as server-sent events."""
+
+    repository = get_repository(request)
+    try:
+        subscription = repository.subscribe_events(
+            session_id,
+            replay_existing=replay,
+        )
+    except RepositoryError as exc:
+        handle_repository_error(exc)
+        raise
+
+    wait_seconds = min(max(heartbeat_seconds, 0.1), 60.0)
+
+    async def event_generator():
+        try:
+            for event in subscription.replay_events:
+                if await request.is_disconnected():
+                    return
+                yield format_sse_event(event)
+
+            while True:
+                if await request.is_disconnected():
+                    return
+                try:
+                    event = await asyncio.to_thread(
+                        subscription.queue.get,
+                        True,
+                        wait_seconds,
+                    )
+                except Empty:
+                    yield format_sse_comment("keep-alive")
+                    continue
+                yield format_sse_event(event)
+        finally:
+            repository.unsubscribe_events(subscription)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type=EVENT_STREAM_MEDIA_TYPE,
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

@@ -8,7 +8,7 @@ Current major modules:
 
 ```txt
 src/cli.py                         Typer CLI: search, fetch, profiles
-src/api/                            FastAPI product API skeleton with in-memory repository and runtime loop bridge
+src/api/                            FastAPI product API skeleton with in-memory repository, runtime loop bridge, and event stream
 src/config/loader.py               Pydantic config models
 src/config/factory.py              backend/provider factory functions
 src/config/models.yaml             model/profile presets
@@ -113,7 +113,7 @@ Rules:
 
 Add a product API using FastAPI.
 
-An initial skeleton currently exists under `src/api/`. It exposes project, session, branch, paper, event, and run-control endpoints against a process-local in-memory repository. Session creation creates a lightweight runtime `LoopState` and root branch via the existing orchestration models, and exposes that binding through `GET /sessions/{session_id}/loop`. This skeleton establishes the API boundary only; it does not provide durable state, auth, workers, streaming, or real research execution.
+An initial skeleton currently exists under `src/api/`. It exposes project, session, branch, paper, event, run-control, and server-sent event stream endpoints against a process-local in-memory repository. Session creation creates a lightweight runtime `LoopState` and root branch via the existing orchestration models, and exposes that binding through `GET /sessions/{session_id}/loop`. The stream replays current events and publishes new process-local events. This skeleton establishes the API boundary only; it does not provide durable state, auth, workers, production-grade realtime infrastructure, or real research execution.
 
 Responsibilities:
 
@@ -369,6 +369,7 @@ POST   /sessions/{session_id}/resume
 POST   /sessions/{session_id}/cancel
 
 GET    /sessions/{session_id}/events
+GET    /sessions/{session_id}/events/stream
 GET    /sessions/{session_id}/branches
 GET    /sessions/{session_id}/papers
 GET    /sessions/{session_id}/claims

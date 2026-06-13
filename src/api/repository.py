@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from queue import Queue
 from threading import Lock
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -41,6 +43,15 @@ class ConflictError(RepositoryError):
     """Raised when a requested state transition is invalid."""
 
 
+@dataclass(frozen=True)
+class EventSubscription:
+    """Process-local subscription to a session event stream."""
+
+    session_id: str
+    replay_events: list[Event]
+    queue: Queue[Event]
+
+
 def utc_now() -> datetime:
     """Return a timezone-aware UTC timestamp."""
 
@@ -56,6 +67,7 @@ class InMemoryRepository:
         self._branches: dict[str, Branch] = {}
         self._papers: dict[str, Paper] = {}
         self._events: dict[str, Event] = {}
+        self._event_subscribers: dict[str, list[Queue[Event]]] = {}
         self._runtime_loop_bindings: dict[str, RuntimeLoopBinding] = {}
         self._runtime_loop_states: dict[str, LoopState] = {}
         self._loop_bridge = loop_bridge or ResearchLoopBridge()
@@ -376,6 +388,40 @@ class InMemoryRepository:
             self._get_session_unlocked(session_id)
             return self._list_events_unlocked(session_id)
 
+    def subscribe_events(
+        self,
+        session_id: str,
+        replay_existing: bool = True,
+    ) -> EventSubscription:
+        """Subscribe to a process-local event stream for a session."""
+
+        with self._lock:
+            self._get_session_unlocked(session_id)
+            queue: Queue[Event] = Queue()
+            replay_events = (
+                self._list_events_unlocked(session_id) if replay_existing else []
+            )
+            self._event_subscribers.setdefault(session_id, []).append(queue)
+            return EventSubscription(
+                session_id=session_id,
+                replay_events=replay_events,
+                queue=queue,
+            )
+
+    def unsubscribe_events(self, subscription: EventSubscription) -> None:
+        """Remove a process-local event stream subscription."""
+
+        with self._lock:
+            subscribers = self._event_subscribers.get(subscription.session_id)
+            if not subscribers:
+                return
+            try:
+                subscribers.remove(subscription.queue)
+            except ValueError:
+                return
+            if not subscribers:
+                del self._event_subscribers[subscription.session_id]
+
     def _get_session_unlocked(self, session_id: str) -> ResearchSession:
         try:
             return self._sessions[session_id]
@@ -430,7 +476,13 @@ class InMemoryRepository:
             created_at=utc_now(),
         )
         self._events[event.id] = event
+        self._publish_event_unlocked(event)
         return event
+
+    def _publish_event_unlocked(self, event: Event) -> None:
+        subscribers = self._event_subscribers.get(event.session_id, [])
+        for subscriber in list(subscribers):
+            subscriber.put_nowait(event)
 
     def _validate_session_transition(
         self,
