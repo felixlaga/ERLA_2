@@ -93,8 +93,9 @@ Add or preserve tests for:
 - `InnerLoop._parse_selection_response`.
 - HaluGate `compute_groundedness`.
 - Convex client event payload construction with mocked HTTP.
-- Product API skeleton endpoints, session-to-runtime-loop binding, process-local event streaming, and claim extraction endpoints in `test_api.py`.
+- Product API skeleton endpoints, session-to-runtime-loop binding, process-local event streaming, claim extraction endpoints, and supplied-evidence claim validation endpoints in `test_api.py`.
 - Deterministic claim extraction behavior in `test_claim_extraction.py`.
+- Deterministic claim validation behavior in `test_claim_validation.py`.
 - Initial database migration structure in `test_database_schema.py`.
 - Frontend dashboard shell and inspector build through `npm run build` in `viewer/`.
 
@@ -141,6 +142,8 @@ Once the product API exists, test:
 - Branch listing.
 - Paper listing.
 - Claim extraction.
+- Claim validation.
+- Claim evidence listing.
 - Claim listing.
 - Event listing.
 - Event streaming.

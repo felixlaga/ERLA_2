@@ -18,7 +18,10 @@ from .models import (
     BranchPatch,
     BranchSplitRequest,
     Claim,
+    ClaimEvidence,
     ClaimExtractionRequest,
+    ClaimValidationRequest,
+    ClaimValidationResult,
     Event,
     Paper,
     Project,
@@ -339,6 +342,32 @@ def get_claim(claim_id: str, request: Request) -> Claim:
 
     try:
         return get_repository(request).get_claim(claim_id)
+    except RepositoryError as exc:
+        handle_repository_error(exc)
+        raise
+
+
+@router.post("/claims/{claim_id}/validate", response_model=ClaimValidationResult)
+def validate_claim(
+    claim_id: str,
+    payload: ClaimValidationRequest,
+    request: Request,
+) -> ClaimValidationResult:
+    """Validate a claim against supplied evidence."""
+
+    try:
+        return get_repository(request).validate_claim(claim_id, payload)
+    except RepositoryError as exc:
+        handle_repository_error(exc)
+        raise
+
+
+@router.get("/claims/{claim_id}/evidence", response_model=list[ClaimEvidence])
+def list_claim_evidence(claim_id: str, request: Request) -> list[ClaimEvidence]:
+    """List evidence attached to a claim."""
+
+    try:
+        return get_repository(request).list_claim_evidence(claim_id)
     except RepositoryError as exc:
         handle_repository_error(exc)
         raise

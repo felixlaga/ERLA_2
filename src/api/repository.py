@@ -10,16 +10,19 @@ from threading import Lock
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from ..claims import ClaimExtractor
+from ..claims import ClaimExtractor, ClaimVerifier, EvidenceInput
 from .models import (
     Branch,
     BranchCreate,
     BranchPatch,
     BranchStatus,
     Claim,
+    ClaimEvidence,
     ClaimExtractionRequest,
     ClaimStatus,
     ClaimType,
+    ClaimValidationRequest,
+    ClaimValidationResult,
     Event,
     Paper,
     Project,
@@ -70,18 +73,21 @@ class InMemoryRepository:
         self,
         loop_bridge: ResearchLoopBridge | None = None,
         claim_extractor: ClaimExtractor | None = None,
+        claim_verifier: ClaimVerifier | None = None,
     ) -> None:
         self._projects: dict[str, Project] = {}
         self._sessions: dict[str, ResearchSession] = {}
         self._branches: dict[str, Branch] = {}
         self._papers: dict[str, Paper] = {}
         self._claims: dict[str, Claim] = {}
+        self._claim_evidence: dict[str, ClaimEvidence] = {}
         self._events: dict[str, Event] = {}
         self._event_subscribers: dict[str, list[Queue[Event]]] = {}
         self._runtime_loop_bindings: dict[str, RuntimeLoopBinding] = {}
         self._runtime_loop_states: dict[str, LoopState] = {}
         self._loop_bridge = loop_bridge or ResearchLoopBridge()
         self._claim_extractor = claim_extractor or ClaimExtractor()
+        self._claim_verifier = claim_verifier or ClaimVerifier()
         self._lock = Lock()
 
     def create_project(self, payload: ProjectCreate) -> Project:
@@ -202,6 +208,9 @@ class InMemoryRepository:
                 branches=self._list_branches_unlocked(session_id),
                 papers=self._list_papers_unlocked(session_id),
                 claims=self._list_claims_unlocked(session_id),
+                claim_evidence=self._list_claim_evidence_for_session_unlocked(
+                    session_id
+                ),
                 events=self._list_events_unlocked(session_id),
             )
 
@@ -457,10 +466,81 @@ class InMemoryRepository:
         """Get a claim."""
 
         with self._lock:
-            try:
-                return self._claims[claim_id]
-            except KeyError as exc:
-                raise NotFoundError("Claim not found") from exc
+            return self._get_claim_unlocked(claim_id)
+
+    def validate_claim(
+        self,
+        claim_id: str,
+        payload: ClaimValidationRequest,
+    ) -> ClaimValidationResult:
+        """Validate a claim against supplied evidence."""
+
+        with self._lock:
+            claim = self._get_claim_unlocked(claim_id)
+            now = utc_now()
+            evidence_items: list[ClaimEvidence] = []
+            for evidence_payload in payload.evidence:
+                if evidence_payload.paper_id:
+                    paper = self._get_paper_unlocked(evidence_payload.paper_id)
+                    if paper.session_id != claim.session_id:
+                        raise NotFoundError("Paper not found")
+
+                evidence = ClaimEvidence(
+                    id=self._new_id("evd"),
+                    claim_id=claim.id,
+                    session_id=claim.session_id,
+                    paper_id=evidence_payload.paper_id,
+                    chunk_id=evidence_payload.chunk_id,
+                    evidence_text=evidence_payload.evidence_text,
+                    relation=evidence_payload.relation,
+                    score=evidence_payload.score,
+                    page_start=evidence_payload.page_start,
+                    page_end=evidence_payload.page_end,
+                    section_title=evidence_payload.section_title,
+                    created_at=now,
+                )
+                self._claim_evidence[evidence.id] = evidence
+                evidence_items.append(evidence)
+
+            decision = self._claim_verifier.decide(
+                [
+                    EvidenceInput(
+                        relation=evidence.relation.value,
+                        score=evidence.score,
+                    )
+                    for evidence in evidence_items
+                ]
+            )
+            claim.status = ClaimStatus(decision.status)
+            claim.confidence = decision.confidence
+            claim.updated_at = now
+            self._claims[claim.id] = claim
+
+            self._create_event_unlocked(
+                session_id=claim.session_id,
+                branch_id=claim.branch_id,
+                paper_id=claim.paper_id,
+                event_type="claim_validated",
+                payload={
+                    "claim_id": claim.id,
+                    "status": claim.status.value,
+                    "confidence": claim.confidence,
+                    "evidence_ids": [evidence.id for evidence in evidence_items],
+                    "validator_type": payload.validator_type,
+                    "notes": payload.notes,
+                },
+            )
+            return ClaimValidationResult(
+                claim=claim,
+                evidence=evidence_items,
+            )
+
+    def list_claim_evidence(self, claim_id: str) -> list[ClaimEvidence]:
+        """List evidence attached to a claim."""
+
+        with self._lock:
+            self._get_claim_unlocked(claim_id)
+            return self._list_claim_evidence_unlocked(claim_id)
 
     def list_events(self, session_id: str) -> list[Event]:
         """List session events."""
@@ -521,6 +601,12 @@ class InMemoryRepository:
                 return paper
         raise NotFoundError("Paper not found")
 
+    def _get_claim_unlocked(self, claim_id: str) -> Claim:
+        try:
+            return self._claims[claim_id]
+        except KeyError as exc:
+            raise NotFoundError("Claim not found") from exc
+
     def _list_branches_unlocked(self, session_id: str) -> list[Branch]:
         return [
             branch
@@ -542,6 +628,25 @@ class InMemoryRepository:
             if claim.session_id == session_id
         ]
         return sorted(claims, key=lambda claim: claim.created_at)
+
+    def _list_claim_evidence_unlocked(self, claim_id: str) -> list[ClaimEvidence]:
+        evidence = [
+            item
+            for item in self._claim_evidence.values()
+            if item.claim_id == claim_id
+        ]
+        return sorted(evidence, key=lambda item: item.created_at)
+
+    def _list_claim_evidence_for_session_unlocked(
+        self,
+        session_id: str,
+    ) -> list[ClaimEvidence]:
+        evidence = [
+            item
+            for item in self._claim_evidence.values()
+            if item.session_id == session_id
+        ]
+        return sorted(evidence, key=lambda item: item.created_at)
 
     def _list_events_unlocked(self, session_id: str) -> list[Event]:
         events = [

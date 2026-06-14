@@ -152,7 +152,7 @@ Rules:
 
 ## 10. Claim Verifier
 
-Future required component.
+An initial deterministic supplied-evidence verifier scaffold exists. The future worker/agent version must preserve the same safety rules while adding automated evidence retrieval and richer validation.
 
 Responsibilities:
 

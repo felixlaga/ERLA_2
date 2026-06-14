@@ -96,6 +96,8 @@ Generated summaries and syntheses must be decomposed into atomic claims.
 
 Extracted factual claims start as `needs_review` until a verifier attaches evidence. Extracted hypotheses or speculative statements must be marked `speculative`.
 
+The current API scaffold can validate a claim against explicitly supplied evidence passages. It stores those evidence records in process memory and uses deterministic relation rules: `contradicts` marks a claim `contradicted`, `supports` marks it `supported`, `weakly_supports` marks it `weakly_supported`, and `mentions` or `insufficient` must not promote the claim. Production validation still needs automated evidence retrieval, durable evidence storage, and richer verifier traces.
+
 Bad claim:
 
 > The paper introduces a new method, evaluates it on several datasets, outperforms baselines, and discusses limitations.

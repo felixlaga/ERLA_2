@@ -18,7 +18,7 @@ Implemented or partially implemented:
 - Local and HTTP HaluGate validation.
 - Recursive research orchestration with Inner Loop, Iteration Loop, Branch Manager, Master Agent, Managing Agent, Reflection Agent, and Hypothesis generation.
 - FastAPI product API skeleton under `src/api` with a temporary in-memory repository, runtime research-loop binding, and process-local event streaming.
-- Deterministic claim extraction scaffold under `src/claims` with API endpoints for review-ready claims.
+- Deterministic claim extraction and claim validation scaffolds under `src/claims`, with API endpoints for review-ready claims and supplied-evidence validation.
 - Initial Postgres product schema migration under `migrations/`.
 - Frontend dashboard shell in the Vite/React `viewer/` prototype with selectable branch and paper inspectors.
 - Convex event emission client for realtime visualization.
@@ -33,7 +33,7 @@ Not yet production-ready:
 - No running durable product database or repository layer wired to the API.
 - The product API is skeleton-only and not connected to durable state, auth, workers, production-grade realtime infrastructure, or research job execution.
 - No job queue for long research runs.
-- No claim verifier or claim-level evidence ledger.
+- No production claim verifier, automated evidence retrieval, or durable claim-level evidence ledger. Current validation is deterministic and in-memory only.
 - No finalized source-of-truth frontend architecture.
 - The CLI is still the primary interface.
 
@@ -59,7 +59,7 @@ Current package layout:
 src/
   cli.py                         Typer CLI entrypoint
   api/                           FastAPI product API skeleton
-  claims/                        deterministic claim extraction scaffold
+  claims/                        deterministic claim extraction/validation scaffolds
   summarize.py                   LLM paper summarization
   config/                        Pydantic config and model profiles
   semantic_scholar/              Semantic Scholar client, models, protocols, adapter
@@ -173,11 +173,13 @@ erla fetch arxiv:2301.00001 --with-text
 
 ## Product API skeleton
 
-The product API is an early boundary for projects, sessions, branches, papers, events, and run controls. It currently uses an in-memory repository and must not be treated as durable product state.
+The product API is an early boundary for projects, sessions, branches, papers, claims, claim evidence, events, and run controls. It currently uses an in-memory repository and must not be treated as durable product state.
 
 Session creation now creates a lightweight runtime `LoopState` and root branch through the existing research-core orchestration models. This binds product sessions to the current research loop shape, but it does not run long research work in API handlers and does not replace the future worker queue or durable repository.
 
 Session events can be streamed over server-sent events from the in-memory event log. The stream replays current session events and publishes new process-local events, but it is not durable, resumable across API restarts, or a replacement for the future database-backed realtime layer.
+
+Claim validation accepts explicitly supplied evidence passages, stores process-local evidence records, updates claim status using deterministic relation rules, and emits `claim_validated`. It does not retrieve evidence automatically, call a production verifier, or persist evidence beyond the in-memory API process.
 
 Run locally:
 
@@ -194,6 +196,7 @@ Implemented skeleton endpoints include:
 - `GET /sessions/{session_id}/branches`, `GET /sessions/{session_id}/papers`, `GET /sessions/{session_id}/events`
 - `GET /sessions/{session_id}/events/stream`
 - `POST /sessions/{session_id}/claims/extract`, `GET /sessions/{session_id}/claims`
+- `POST /claims/{claim_id}/validate`, `GET /claims/{claim_id}/evidence`
 - `GET /branches/{branch_id}`, `PATCH /branches/{branch_id}`
 - `POST /branches/{branch_id}/continue|split|prune`
 - `GET /papers/{paper_id}`, `GET /claims/{claim_id}`
@@ -215,15 +218,14 @@ For production, move heavy validation to a separately deployed service with batc
 
 ## Development direction
 
-The next engineering milestone is a web dashboard MVP. With the API skeleton, initial schema migration, prototype dashboard shell, session-to-loop binding, process-local event streaming, selectable branch/paper inspectors, and deterministic claim extraction in place, remaining work is claim validation, durable state wiring, real job execution, and the final frontend architecture:
+The next engineering milestone is a web dashboard MVP backed by durable state and worker-driven research execution. With the API skeleton, initial schema migration, prototype dashboard shell, session-to-loop binding, process-local event streaming, selectable branch/paper inspectors, deterministic claim extraction, and supplied-evidence claim validation in place, remaining work is:
 
-1. Add claim validation and claim evidence ledger.
-2. Keep extracted claims unpromoted until evidence is attached.
-3. Replace the in-memory API repository with durable repositories.
-4. Add background worker queue.
-5. Decide whether to migrate the dashboard shell to Next.js under `apps/web` or formalize the existing `viewer/`.
-6. Connect session execution to the existing `MasterAgent` orchestration through workers.
-7. Add branch tree and richer event log interactions.
+1. Replace the in-memory API repository with durable repositories for sessions, branches, papers, claims, evidence, and events.
+2. Add a background worker queue for long research runs.
+3. Implement automated evidence retrieval and production claim verification.
+4. Decide whether to migrate the dashboard shell to Next.js under `apps/web` or formalize the existing `viewer/`.
+5. Connect session execution to the existing `MasterAgent` orchestration through workers.
+6. Add branch tree, claim inspector, evidence passage viewer, and richer event log interactions.
 
 ## Source-of-truth docs
 

@@ -219,6 +219,65 @@ def test_claim_extraction_creates_review_ready_claims():
     assert claims_event["payload"]["claim_count"] == 4
 
 
+def test_claim_validation_stores_evidence_and_updates_status():
+    client = make_client()
+    session = client.post(
+        "/sessions",
+        json={"initial_query": "claim validation for evidence ledger"},
+    ).json()
+
+    claims = client.post(
+        f"/sessions/{session['id']}/claims/extract",
+        json={"source_text": "The paper introduces a retrieval method."},
+    ).json()
+    claim = claims[0]
+
+    validation_response = client.post(
+        f"/claims/{claim['id']}/validate",
+        json={
+            "evidence": [
+                {
+                    "evidence_text": (
+                        "We introduce a retrieval method for evidence-grounded "
+                        "literature navigation."
+                    ),
+                    "relation": "supports",
+                    "score": 0.93,
+                    "section_title": "Abstract",
+                }
+            ]
+        },
+    )
+
+    assert validation_response.status_code == 200
+    result = validation_response.json()
+    assert result["claim"]["status"] == "supported"
+    assert result["claim"]["confidence"] == 0.93
+    assert result["evidence"][0]["relation"] == "supports"
+    assert result["evidence"][0]["claim_id"] == claim["id"]
+
+    claim_response = client.get(f"/claims/{claim['id']}")
+    assert claim_response.status_code == 200
+    assert claim_response.json()["status"] == "supported"
+
+    evidence_response = client.get(f"/claims/{claim['id']}/evidence")
+    assert evidence_response.status_code == 200
+    assert evidence_response.json()[0]["section_title"] == "Abstract"
+
+    state = client.get(f"/sessions/{session['id']}/state").json()
+    assert state["claims"][0]["status"] == "supported"
+    assert len(state["claim_evidence"]) == 1
+
+    events = client.get(f"/sessions/{session['id']}/events").json()
+    claim_validated = next(
+        event for event in events if event["event_type"] == "claim_validated"
+    )
+    assert claim_validated["payload"]["status"] == "supported"
+    assert claim_validated["payload"]["evidence_ids"] == [
+        result["evidence"][0]["id"]
+    ]
+
+
 def test_branch_split_patch_and_prune():
     client = make_client()
     session = client.post(
@@ -292,6 +351,15 @@ def test_paper_and_not_found_endpoints_are_wired():
 
     missing_claim_response = client.get("/claims/missing")
     assert missing_claim_response.status_code == 404
+
+    missing_evidence_response = client.get("/claims/missing/evidence")
+    assert missing_evidence_response.status_code == 404
+
+    missing_validation_response = client.post(
+        "/claims/missing/validate",
+        json={"evidence": []},
+    )
+    assert missing_validation_response.status_code == 404
 
 
 def test_split_requires_at_least_one_child_branch():

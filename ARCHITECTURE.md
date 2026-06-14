@@ -113,7 +113,7 @@ Rules:
 
 Add a product API using FastAPI.
 
-An initial skeleton currently exists under `src/api/`. It exposes project, session, branch, paper, claim extraction, event, run-control, and server-sent event stream endpoints against a process-local in-memory repository. Session creation creates a lightweight runtime `LoopState` and root branch via the existing orchestration models, and exposes that binding through `GET /sessions/{session_id}/loop`. The stream replays current events and publishes new process-local events. Claim extraction currently uses a deterministic scaffold and marks claims as `needs_review` or `speculative`; it does not validate evidence. This skeleton establishes the API boundary only; it does not provide durable state, auth, workers, production-grade realtime infrastructure, or real research execution.
+An initial skeleton currently exists under `src/api/`. It exposes project, session, branch, paper, claim extraction, supplied-evidence claim validation, event, run-control, and server-sent event stream endpoints against a process-local in-memory repository. Session creation creates a lightweight runtime `LoopState` and root branch via the existing orchestration models, and exposes that binding through `GET /sessions/{session_id}/loop`. The stream replays current events and publishes new process-local events. Claim extraction currently uses a deterministic scaffold and marks claims as `needs_review` or `speculative`; claim validation accepts explicit evidence passages and applies deterministic relation rules, but it does not retrieve evidence, call a production verifier, or persist evidence durably. This skeleton establishes the API boundary only; it does not provide durable state, auth, workers, production-grade realtime infrastructure, or real research execution.
 
 Responsibilities:
 
@@ -122,6 +122,8 @@ Responsibilities:
 - Run controls.
 - Branch controls.
 - Claim extraction.
+- Claim validation.
+- Claim evidence retrieval.
 - Paper, summary, claim, hypothesis retrieval.
 - Export creation.
 - Event streaming endpoint.
@@ -148,7 +150,7 @@ Responsibilities:
 
 - `GET /health`
 - `POST /validate`
-- later: batched claim validation
+- later: batched production claim validation
 - later: cached validation by source hash + claim hash
 
 ### 5.3 Worker service
@@ -342,12 +344,13 @@ Current agents/components:
 - ReflectionAgent.
 - HypothesisGenerator.
 - Deterministic ClaimExtractor scaffold.
+- Deterministic ClaimVerifier scaffold.
 
 Target additional agents/components:
 
 - SearchPlanner.
 - PaperSelector as independent component.
-- ClaimVerifier.
+- Production ClaimVerifier with evidence retrieval.
 - LLM-assisted ClaimExtractor.
 - ContradictionDetector.
 - ResearchAdvisor.
@@ -385,6 +388,8 @@ PATCH  /branches/{branch_id}
 
 GET    /papers/{paper_id}
 GET    /claims/{claim_id}
+POST   /claims/{claim_id}/validate
+GET    /claims/{claim_id}/evidence
 GET    /hypotheses/{hypothesis_id}
 
 POST   /sessions/{session_id}/exports
@@ -412,6 +417,6 @@ Never discard an entire session because one paper failed.
 4. Replace in-memory session state gradually.
 5. Add job queue.
 6. Add frontend dashboard.
-7. Add claim extraction and claim validation.
+7. Add production claim extraction and claim validation.
 8. Add exports.
 9. Only then consider deeper package reorganization.

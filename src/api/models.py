@@ -66,6 +66,16 @@ class ClaimStatus(str, Enum):
     NEEDS_REVIEW = "needs_review"
 
 
+class EvidenceRelation(str, Enum):
+    """Allowed claim evidence relations."""
+
+    SUPPORTS = "supports"
+    WEAKLY_SUPPORTS = "weakly_supports"
+    CONTRADICTS = "contradicts"
+    MENTIONS = "mentions"
+    INSUFFICIENT = "insufficient"
+
+
 class ProjectCreate(BaseModel):
     """Payload for creating a project."""
 
@@ -185,6 +195,51 @@ class Claim(BaseModel):
     updated_at: datetime
 
 
+class ClaimEvidenceCreate(BaseModel):
+    """Evidence supplied for claim validation."""
+
+    evidence_text: str = Field(min_length=1)
+    relation: EvidenceRelation
+    paper_id: str | None = None
+    chunk_id: str | None = None
+    score: float | None = Field(default=None, ge=0, le=1)
+    page_start: int | None = Field(default=None, ge=1)
+    page_end: int | None = Field(default=None, ge=1)
+    section_title: str | None = None
+
+
+class ClaimValidationRequest(BaseModel):
+    """Payload for validating a claim against supplied evidence."""
+
+    evidence: list[ClaimEvidenceCreate] = Field(default_factory=list)
+    validator_type: str = "deterministic_claim_verifier"
+    notes: str | None = None
+
+
+class ClaimEvidence(BaseModel):
+    """Evidence passage attached to a claim."""
+
+    id: str
+    claim_id: str
+    session_id: str
+    paper_id: str | None = None
+    chunk_id: str | None = None
+    evidence_text: str
+    relation: EvidenceRelation
+    score: float | None = Field(default=None, ge=0, le=1)
+    page_start: int | None = None
+    page_end: int | None = None
+    section_title: str | None = None
+    created_at: datetime
+
+
+class ClaimValidationResult(BaseModel):
+    """Result of validating a claim and storing its evidence."""
+
+    claim: Claim
+    evidence: list[ClaimEvidence] = Field(default_factory=list)
+
+
 class Event(BaseModel):
     """Realtime and historical event log entry."""
 
@@ -217,4 +272,5 @@ class SessionSnapshot(BaseModel):
     branches: list[Branch] = Field(default_factory=list)
     papers: list[Paper] = Field(default_factory=list)
     claims: list[Claim] = Field(default_factory=list)
+    claim_evidence: list[ClaimEvidence] = Field(default_factory=list)
     events: list[Event] = Field(default_factory=list)
