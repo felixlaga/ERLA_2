@@ -17,6 +17,8 @@ from .models import (
     Branch,
     BranchPatch,
     BranchSplitRequest,
+    Claim,
+    ClaimExtractionRequest,
     Event,
     Paper,
     Project,
@@ -296,6 +298,47 @@ def get_paper(paper_id: str, request: Request) -> Paper:
 
     try:
         return get_repository(request).get_paper(paper_id)
+    except RepositoryError as exc:
+        handle_repository_error(exc)
+        raise
+
+
+@router.post(
+    "/sessions/{session_id}/claims/extract",
+    response_model=list[Claim],
+    status_code=status.HTTP_201_CREATED,
+)
+def extract_session_claims(
+    session_id: str,
+    payload: ClaimExtractionRequest,
+    request: Request,
+) -> list[Claim]:
+    """Extract atomic claims without validating them."""
+
+    try:
+        return get_repository(request).extract_claims(session_id, payload)
+    except RepositoryError as exc:
+        handle_repository_error(exc)
+        raise
+
+
+@router.get("/sessions/{session_id}/claims", response_model=list[Claim])
+def list_session_claims(session_id: str, request: Request) -> list[Claim]:
+    """List claims for a session."""
+
+    try:
+        return get_repository(request).list_claims(session_id)
+    except RepositoryError as exc:
+        handle_repository_error(exc)
+        raise
+
+
+@router.get("/claims/{claim_id}", response_model=Claim)
+def get_claim(claim_id: str, request: Request) -> Claim:
+    """Get a claim."""
+
+    try:
+        return get_repository(request).get_claim(claim_id)
     except RepositoryError as exc:
         handle_repository_error(exc)
         raise

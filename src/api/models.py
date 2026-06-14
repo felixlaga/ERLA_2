@@ -40,6 +40,32 @@ class BranchMode(str, Enum):
     GAP_ANALYSIS = "gap_analysis"
 
 
+class ClaimType(str, Enum):
+    """Allowed claim types."""
+
+    FACTUAL = "factual"
+    METHODOLOGICAL = "methodological"
+    EMPIRICAL_RESULT = "empirical_result"
+    THEORETICAL_RESULT = "theoretical_result"
+    DEFINITION = "definition"
+    LIMITATION = "limitation"
+    ASSUMPTION = "assumption"
+    COMPARISON = "comparison"
+    HYPOTHESIS = "hypothesis"
+    RECOMMENDATION = "recommendation"
+
+
+class ClaimStatus(str, Enum):
+    """Allowed claim statuses."""
+
+    SUPPORTED = "supported"
+    WEAKLY_SUPPORTED = "weakly_supported"
+    CONTRADICTED = "contradicted"
+    NOT_FOUND = "not_found"
+    SPECULATIVE = "speculative"
+    NEEDS_REVIEW = "needs_review"
+
+
 class ProjectCreate(BaseModel):
     """Payload for creating a project."""
 
@@ -131,6 +157,34 @@ class Paper(BaseModel):
     created_at: datetime
 
 
+class ClaimExtractionRequest(BaseModel):
+    """Payload for extracting claims from summary or synthesis text."""
+
+    source_text: str = Field(min_length=1)
+    branch_id: str | None = None
+    paper_id: str | None = None
+    summary_id: str | None = None
+    created_by: str = "deterministic_claim_extractor"
+    max_claims: int = Field(default=20, ge=1, le=100)
+
+
+class Claim(BaseModel):
+    """Atomic claim extracted from generated research text."""
+
+    id: str
+    session_id: str
+    branch_id: str | None = None
+    paper_id: str | None = None
+    summary_id: str | None = None
+    claim_text: str
+    claim_type: ClaimType
+    status: ClaimStatus = ClaimStatus.NEEDS_REVIEW
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    created_by: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class Event(BaseModel):
     """Realtime and historical event log entry."""
 
@@ -162,4 +216,5 @@ class SessionSnapshot(BaseModel):
     runtime_loop: RuntimeLoopBinding | None = None
     branches: list[Branch] = Field(default_factory=list)
     papers: list[Paper] = Field(default_factory=list)
+    claims: list[Claim] = Field(default_factory=list)
     events: list[Event] = Field(default_factory=list)

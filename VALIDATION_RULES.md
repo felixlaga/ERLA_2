@@ -94,6 +94,8 @@ A summary may be shown if it is partially validated, but the UI must show valida
 
 Generated summaries and syntheses must be decomposed into atomic claims.
 
+Extracted factual claims start as `needs_review` until a verifier attaches evidence. Extracted hypotheses or speculative statements must be marked `speculative`.
+
 Bad claim:
 
 > The paper introduces a new method, evaluates it on several datasets, outperforms baselines, and discusses limitations.

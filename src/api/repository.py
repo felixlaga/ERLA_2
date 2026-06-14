@@ -10,11 +10,16 @@ from threading import Lock
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
+from ..claims import ClaimExtractor
 from .models import (
     Branch,
     BranchCreate,
     BranchPatch,
     BranchStatus,
+    Claim,
+    ClaimExtractionRequest,
+    ClaimStatus,
+    ClaimType,
     Event,
     Paper,
     Project,
@@ -61,16 +66,22 @@ def utc_now() -> datetime:
 class InMemoryRepository:
     """Process-local repository used until durable storage is added."""
 
-    def __init__(self, loop_bridge: ResearchLoopBridge | None = None) -> None:
+    def __init__(
+        self,
+        loop_bridge: ResearchLoopBridge | None = None,
+        claim_extractor: ClaimExtractor | None = None,
+    ) -> None:
         self._projects: dict[str, Project] = {}
         self._sessions: dict[str, ResearchSession] = {}
         self._branches: dict[str, Branch] = {}
         self._papers: dict[str, Paper] = {}
+        self._claims: dict[str, Claim] = {}
         self._events: dict[str, Event] = {}
         self._event_subscribers: dict[str, list[Queue[Event]]] = {}
         self._runtime_loop_bindings: dict[str, RuntimeLoopBinding] = {}
         self._runtime_loop_states: dict[str, LoopState] = {}
         self._loop_bridge = loop_bridge or ResearchLoopBridge()
+        self._claim_extractor = claim_extractor or ClaimExtractor()
         self._lock = Lock()
 
     def create_project(self, payload: ProjectCreate) -> Project:
@@ -190,6 +201,7 @@ class InMemoryRepository:
                 runtime_loop=self._runtime_loop_bindings.get(session_id),
                 branches=self._list_branches_unlocked(session_id),
                 papers=self._list_papers_unlocked(session_id),
+                claims=self._list_claims_unlocked(session_id),
                 events=self._list_events_unlocked(session_id),
             )
 
@@ -376,10 +388,79 @@ class InMemoryRepository:
         """Get a paper by internal API ID or provider paper ID."""
 
         with self._lock:
-            for paper in self._papers.values():
-                if paper.id == paper_id or paper.paper_id == paper_id:
-                    return paper
-            raise NotFoundError("Paper not found")
+            return self._get_paper_unlocked(paper_id)
+
+    def extract_claims(
+        self,
+        session_id: str,
+        payload: ClaimExtractionRequest,
+    ) -> list[Claim]:
+        """Extract review-ready atomic claims from source text."""
+
+        with self._lock:
+            self._get_session_unlocked(session_id)
+            if payload.branch_id:
+                branch = self._get_branch_unlocked(payload.branch_id)
+                if branch.session_id != session_id:
+                    raise NotFoundError("Branch not found")
+            if payload.paper_id:
+                paper = self._get_paper_unlocked(payload.paper_id)
+                if paper.session_id != session_id:
+                    raise NotFoundError("Paper not found")
+
+            now = utc_now()
+            extracted = self._claim_extractor.extract(
+                payload.source_text,
+                max_claims=payload.max_claims,
+            )
+            claims: list[Claim] = []
+            for draft in extracted:
+                claim = Claim(
+                    id=self._new_id("claim"),
+                    session_id=session_id,
+                    branch_id=payload.branch_id,
+                    paper_id=payload.paper_id,
+                    summary_id=payload.summary_id,
+                    claim_text=draft.text,
+                    claim_type=ClaimType(draft.claim_type),
+                    status=ClaimStatus(draft.status),
+                    confidence=draft.confidence,
+                    created_by=payload.created_by,
+                    created_at=now,
+                    updated_at=now,
+                )
+                self._claims[claim.id] = claim
+                claims.append(claim)
+
+            self._create_event_unlocked(
+                session_id=session_id,
+                branch_id=payload.branch_id,
+                paper_id=payload.paper_id,
+                event_type="claims_extracted",
+                payload={
+                    "claim_ids": [claim.id for claim in claims],
+                    "claim_count": len(claims),
+                    "created_by": payload.created_by,
+                    "summary_id": payload.summary_id,
+                },
+            )
+            return claims
+
+    def list_claims(self, session_id: str) -> list[Claim]:
+        """List claims for a session."""
+
+        with self._lock:
+            self._get_session_unlocked(session_id)
+            return self._list_claims_unlocked(session_id)
+
+    def get_claim(self, claim_id: str) -> Claim:
+        """Get a claim."""
+
+        with self._lock:
+            try:
+                return self._claims[claim_id]
+            except KeyError as exc:
+                raise NotFoundError("Claim not found") from exc
 
     def list_events(self, session_id: str) -> list[Event]:
         """List session events."""
@@ -434,6 +515,12 @@ class InMemoryRepository:
         except KeyError as exc:
             raise NotFoundError("Branch not found") from exc
 
+    def _get_paper_unlocked(self, paper_id: str) -> Paper:
+        for paper in self._papers.values():
+            if paper.id == paper_id or paper.paper_id == paper_id:
+                return paper
+        raise NotFoundError("Paper not found")
+
     def _list_branches_unlocked(self, session_id: str) -> list[Branch]:
         return [
             branch
@@ -447,6 +534,14 @@ class InMemoryRepository:
             for paper in self._papers.values()
             if paper.session_id == session_id
         ]
+
+    def _list_claims_unlocked(self, session_id: str) -> list[Claim]:
+        claims = [
+            claim
+            for claim in self._claims.values()
+            if claim.session_id == session_id
+        ]
+        return sorted(claims, key=lambda claim: claim.created_at)
 
     def _list_events_unlocked(self, session_id: str) -> list[Event]:
         events = [

@@ -18,6 +18,7 @@ Implemented or partially implemented:
 - Local and HTTP HaluGate validation.
 - Recursive research orchestration with Inner Loop, Iteration Loop, Branch Manager, Master Agent, Managing Agent, Reflection Agent, and Hypothesis generation.
 - FastAPI product API skeleton under `src/api` with a temporary in-memory repository, runtime research-loop binding, and process-local event streaming.
+- Deterministic claim extraction scaffold under `src/claims` with API endpoints for review-ready claims.
 - Initial Postgres product schema migration under `migrations/`.
 - Frontend dashboard shell in the Vite/React `viewer/` prototype with selectable branch and paper inspectors.
 - Convex event emission client for realtime visualization.
@@ -32,7 +33,7 @@ Not yet production-ready:
 - No running durable product database or repository layer wired to the API.
 - The product API is skeleton-only and not connected to durable state, auth, workers, production-grade realtime infrastructure, or research job execution.
 - No job queue for long research runs.
-- No claim-level evidence ledger.
+- No claim verifier or claim-level evidence ledger.
 - No finalized source-of-truth frontend architecture.
 - The CLI is still the primary interface.
 
@@ -58,6 +59,7 @@ Current package layout:
 src/
   cli.py                         Typer CLI entrypoint
   api/                           FastAPI product API skeleton
+  claims/                        deterministic claim extraction scaffold
   summarize.py                   LLM paper summarization
   config/                        Pydantic config and model profiles
   semantic_scholar/              Semantic Scholar client, models, protocols, adapter
@@ -191,9 +193,10 @@ Implemented skeleton endpoints include:
 - `GET /sessions/{session_id}/state`, `GET /sessions/{session_id}/loop`
 - `GET /sessions/{session_id}/branches`, `GET /sessions/{session_id}/papers`, `GET /sessions/{session_id}/events`
 - `GET /sessions/{session_id}/events/stream`
+- `POST /sessions/{session_id}/claims/extract`, `GET /sessions/{session_id}/claims`
 - `GET /branches/{branch_id}`, `PATCH /branches/{branch_id}`
 - `POST /branches/{branch_id}/continue|split|prune`
-- `GET /papers/{paper_id}`
+- `GET /papers/{paper_id}`, `GET /claims/{claim_id}`
 
 ## HaluGate service
 
@@ -212,10 +215,10 @@ For production, move heavy validation to a separately deployed service with batc
 
 ## Development direction
 
-The next engineering milestone is a web dashboard MVP. With the API skeleton, initial schema migration, prototype dashboard shell, session-to-loop binding, process-local event streaming, and selectable branch/paper inspectors in place, remaining work is claim extraction, durable state wiring, real job execution, and the final frontend architecture:
+The next engineering milestone is a web dashboard MVP. With the API skeleton, initial schema migration, prototype dashboard shell, session-to-loop binding, process-local event streaming, selectable branch/paper inspectors, and deterministic claim extraction in place, remaining work is claim validation, durable state wiring, real job execution, and the final frontend architecture:
 
-1. Add claim extraction.
-2. Add claim validation and claim evidence ledger.
+1. Add claim validation and claim evidence ledger.
+2. Keep extracted claims unpromoted until evidence is attached.
 3. Replace the in-memory API repository with durable repositories.
 4. Add background worker queue.
 5. Decide whether to migrate the dashboard shell to Next.js under `apps/web` or formalize the existing `viewer/`.

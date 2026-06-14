@@ -113,7 +113,7 @@ Rules:
 
 Add a product API using FastAPI.
 
-An initial skeleton currently exists under `src/api/`. It exposes project, session, branch, paper, event, run-control, and server-sent event stream endpoints against a process-local in-memory repository. Session creation creates a lightweight runtime `LoopState` and root branch via the existing orchestration models, and exposes that binding through `GET /sessions/{session_id}/loop`. The stream replays current events and publishes new process-local events. This skeleton establishes the API boundary only; it does not provide durable state, auth, workers, production-grade realtime infrastructure, or real research execution.
+An initial skeleton currently exists under `src/api/`. It exposes project, session, branch, paper, claim extraction, event, run-control, and server-sent event stream endpoints against a process-local in-memory repository. Session creation creates a lightweight runtime `LoopState` and root branch via the existing orchestration models, and exposes that binding through `GET /sessions/{session_id}/loop`. The stream replays current events and publishes new process-local events. Claim extraction currently uses a deterministic scaffold and marks claims as `needs_review` or `speculative`; it does not validate evidence. This skeleton establishes the API boundary only; it does not provide durable state, auth, workers, production-grade realtime infrastructure, or real research execution.
 
 Responsibilities:
 
@@ -121,6 +121,7 @@ Responsibilities:
 - Session CRUD.
 - Run controls.
 - Branch controls.
+- Claim extraction.
 - Paper, summary, claim, hypothesis retrieval.
 - Export creation.
 - Event streaming endpoint.
@@ -340,13 +341,14 @@ Current agents/components:
 - ManagingAgent.
 - ReflectionAgent.
 - HypothesisGenerator.
+- Deterministic ClaimExtractor scaffold.
 
 Target additional agents/components:
 
 - SearchPlanner.
 - PaperSelector as independent component.
-- ClaimExtractor.
 - ClaimVerifier.
+- LLM-assisted ClaimExtractor.
 - ContradictionDetector.
 - ResearchAdvisor.
 - ExportSynthesizer.
@@ -373,6 +375,7 @@ GET    /sessions/{session_id}/events/stream
 GET    /sessions/{session_id}/branches
 GET    /sessions/{session_id}/papers
 GET    /sessions/{session_id}/claims
+POST   /sessions/{session_id}/claims/extract
 GET    /sessions/{session_id}/hypotheses
 
 POST   /branches/{branch_id}/continue

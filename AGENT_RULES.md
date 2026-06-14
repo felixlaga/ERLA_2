@@ -135,7 +135,7 @@ Rules:
 
 ## 9. Claim Extractor
 
-Future required component.
+An initial deterministic extraction scaffold exists. The future worker/agent version must preserve the same safety rules.
 
 Responsibilities:
 

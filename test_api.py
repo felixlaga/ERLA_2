@@ -159,6 +159,66 @@ def test_event_stream_subscription_replays_and_publishes_events():
         raise AssertionError("Unsubscribed event stream received an event")
 
 
+def test_claim_extraction_creates_review_ready_claims():
+    client = make_client()
+    session = client.post(
+        "/sessions",
+        json={"initial_query": "claim extraction for research summaries"},
+    ).json()
+    root_branch = client.get(f"/sessions/{session['id']}/branches").json()[0]
+
+    response = client.post(
+        f"/sessions/{session['id']}/claims/extract",
+        json={
+            "branch_id": root_branch["id"],
+            "source_text": (
+                "The paper introduces a retrieval method, evaluates the method "
+                "on several datasets, outperforms baseline systems, and "
+                "discusses limitations."
+            ),
+        },
+    )
+
+    assert response.status_code == 201
+    claims = response.json()
+    assert [claim["claim_text"] for claim in claims] == [
+        "The paper introduces a retrieval method.",
+        "The paper evaluates the method on several datasets.",
+        "The paper outperforms baseline systems.",
+        "The paper discusses limitations.",
+    ]
+    assert [claim["claim_type"] for claim in claims] == [
+        "methodological",
+        "empirical_result",
+        "comparison",
+        "limitation",
+    ]
+    assert {claim["status"] for claim in claims} == {"needs_review"}
+    assert {claim["branch_id"] for claim in claims} == {root_branch["id"]}
+
+    claims_response = client.get(f"/sessions/{session['id']}/claims")
+    assert claims_response.status_code == 200
+    assert [claim["id"] for claim in claims_response.json()] == [
+        claim["id"] for claim in claims
+    ]
+
+    claim_response = client.get(f"/claims/{claims[0]['id']}")
+    assert claim_response.status_code == 200
+    assert claim_response.json()["claim_text"] == claims[0]["claim_text"]
+
+    state = client.get(f"/sessions/{session['id']}/state").json()
+    assert len(state["claims"]) == 4
+
+    events = client.get(f"/sessions/{session['id']}/events").json()
+    event_types = [event["event_type"] for event in events]
+    assert "claims_extracted" in event_types
+    assert "claim_validated" not in event_types
+    claims_event = next(
+        event for event in events if event["event_type"] == "claims_extracted"
+    )
+    assert claims_event["payload"]["claim_count"] == 4
+
+
 def test_branch_split_patch_and_prune():
     client = make_client()
     session = client.post(
@@ -226,6 +286,12 @@ def test_paper_and_not_found_endpoints_are_wired():
 
     missing_paper_response = client.get("/papers/missing")
     assert missing_paper_response.status_code == 404
+
+    missing_claims_response = client.get("/sessions/missing/claims")
+    assert missing_claims_response.status_code == 404
+
+    missing_claim_response = client.get("/claims/missing")
+    assert missing_claim_response.status_code == 404
 
 
 def test_split_requires_at_least_one_child_branch():
