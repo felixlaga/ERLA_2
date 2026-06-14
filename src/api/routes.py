@@ -32,12 +32,12 @@ from .models import (
     SessionSnapshot,
     SessionStatus,
 )
-from .repository import ConflictError, InMemoryRepository, NotFoundError, RepositoryError
+from .repository import ConflictError, NotFoundError, ProductRepository, RepositoryError
 
 router = APIRouter()
 
 
-def get_repository(request: Request) -> InMemoryRepository:
+def get_repository(request: Request) -> ProductRepository:
     """Get the repository attached to the FastAPI app."""
 
     return request.app.state.repository

@@ -94,6 +94,7 @@ Add or preserve tests for:
 - HaluGate `compute_groundedness`.
 - Convex client event payload construction with mocked HTTP.
 - Product API skeleton endpoints, session-to-runtime-loop binding, process-local event streaming, claim extraction endpoints, and supplied-evidence claim validation endpoints in `test_api.py`.
+- Product API repository backend selection in `test_repository_factory.py`.
 - Deterministic claim extraction behavior in `test_claim_extraction.py`.
 - Deterministic claim validation behavior in `test_claim_validation.py`.
 - Initial database migration structure in `test_database_schema.py`.

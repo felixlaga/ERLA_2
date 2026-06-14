@@ -30,6 +30,7 @@ This repo currently has:
 - Python package under `src/`.
 - Typer CLI in `src/cli.py`.
 - FastAPI product API skeleton in `src/api`.
+- Product API routes depend on a `ProductRepository` contract, with backend selection through `ERLA_REPOSITORY_BACKEND`; only the `memory` backend is implemented.
 - Session creation is wired to a lightweight runtime `LoopState` and root branch through `src/api/research_loop.py`.
 - Process-local server-sent event streaming is available at `GET /sessions/{session_id}/events/stream`.
 - Deterministic claim extraction lives in `src/claims` and is exposed by `POST /sessions/{session_id}/claims/extract`.
@@ -47,7 +48,7 @@ This repo currently has:
 - Prototype Convex schema/functions under `convex/`.
 - Prototype Vite/React viewer under `viewer/`.
 
-Do not assume there is already a production dashboard, running database, job queue, durable repository layer, automated evidence retrieval, production-grade claim verifier, durable evidence ledger, production-grade event stream, or durable API layer. Treat `src/api`, `migrations/`, `viewer/`, and `convex/` as prototype/skeleton/foundation surfaces unless the source-of-truth docs say otherwise.
+Do not assume there is already a production dashboard, running database, job queue, Postgres-backed repository implementation, automated evidence retrieval, production-grade claim verifier, durable evidence ledger, production-grade event stream, or durable API layer. Treat `src/api`, `migrations/`, `viewer/`, and `convex/` as prototype/skeleton/foundation surfaces unless the source-of-truth docs say otherwise.
 
 ## 4. Core product rule
 
@@ -127,7 +128,7 @@ Default order follows `ROADMAP.md`:
 9. Add claim extraction.
 10. Add claim validation.
 
-The initial scaffold for the immediate priority list now exists. Follow the roadmap phases for the next production work: durable state, workers, dashboard hardening, automated evidence retrieval, and production claim verification.
+The initial scaffold for the immediate priority list now exists, and the first durable-state boundary is the API repository contract/factory. Follow the roadmap phases for the next production work: implement a Postgres-backed repository, workers, dashboard hardening, automated evidence retrieval, and production claim verification.
 
 Do not skip durable state and build only UI mockups.
 

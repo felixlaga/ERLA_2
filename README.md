@@ -17,7 +17,7 @@ Implemented or partially implemented:
 - LLM summarization through OpenRouter-compatible APIs.
 - Local and HTTP HaluGate validation.
 - Recursive research orchestration with Inner Loop, Iteration Loop, Branch Manager, Master Agent, Managing Agent, Reflection Agent, and Hypothesis generation.
-- FastAPI product API skeleton under `src/api` with a temporary in-memory repository, runtime research-loop binding, and process-local event streaming.
+- FastAPI product API skeleton under `src/api` with a repository contract/factory, temporary in-memory repository, runtime research-loop binding, and process-local event streaming.
 - Deterministic claim extraction and claim validation scaffolds under `src/claims`, with API endpoints for review-ready claims and supplied-evidence validation.
 - Initial Postgres product schema migration under `migrations/`.
 - Frontend dashboard shell in the Vite/React `viewer/` prototype with selectable branch and paper inspectors.
@@ -30,7 +30,7 @@ Not yet production-ready:
 
 - No production web dashboard backed by the target API/database/worker architecture.
 - The current dashboard shell is not yet the final `apps/web` Next.js frontend.
-- No running durable product database or repository layer wired to the API.
+- No running durable product database or Postgres-backed repository wired to the API. The repository contract/factory exists, but the only implemented backend is still in-memory.
 - The product API is skeleton-only and not connected to durable state, auth, workers, production-grade realtime infrastructure, or research job execution.
 - No job queue for long research runs.
 - No production claim verifier, automated evidence retrieval, or durable claim-level evidence ledger. Current validation is deterministic and in-memory only.
@@ -124,6 +124,7 @@ Optional:
 
 ```bash
 MODEL_PROFILE=research-fast
+ERLA_REPOSITORY_BACKEND=memory
 SEMANTIC_SCHOLAR_API_KEY=...
 HALUGATE_URL=http://localhost:8000
 HALUGATE_DEVICE=cpu
@@ -173,7 +174,7 @@ erla fetch arxiv:2301.00001 --with-text
 
 ## Product API skeleton
 
-The product API is an early boundary for projects, sessions, branches, papers, claims, claim evidence, events, and run controls. It currently uses an in-memory repository and must not be treated as durable product state.
+The product API is an early boundary for projects, sessions, branches, papers, claims, claim evidence, events, and run controls. It depends on a `ProductRepository` contract and creates the configured backend through `ERLA_REPOSITORY_BACKEND`, which defaults to `memory`. The only implemented backend is currently in-memory and must not be treated as durable product state.
 
 Session creation now creates a lightweight runtime `LoopState` and root branch through the existing research-core orchestration models. This binds product sessions to the current research loop shape, but it does not run long research work in API handlers and does not replace the future worker queue or durable repository.
 
@@ -218,9 +219,9 @@ For production, move heavy validation to a separately deployed service with batc
 
 ## Development direction
 
-The next engineering milestone is a web dashboard MVP backed by durable state and worker-driven research execution. With the API skeleton, initial schema migration, prototype dashboard shell, session-to-loop binding, process-local event streaming, selectable branch/paper inspectors, deterministic claim extraction, and supplied-evidence claim validation in place, remaining work is:
+The next engineering milestone is a web dashboard MVP backed by durable state and worker-driven research execution. With the API skeleton, repository contract/factory, initial schema migration, prototype dashboard shell, session-to-loop binding, process-local event streaming, selectable branch/paper inspectors, deterministic claim extraction, and supplied-evidence claim validation in place, remaining work is:
 
-1. Replace the in-memory API repository with durable repositories for sessions, branches, papers, claims, evidence, and events.
+1. Implement a Postgres-backed repository behind the existing `ProductRepository` contract for sessions, branches, papers, claims, evidence, and events.
 2. Add a background worker queue for long research runs.
 3. Implement automated evidence retrieval and production claim verification.
 4. Decide whether to migrate the dashboard shell to Next.js under `apps/web` or formalize the existing `viewer/`.

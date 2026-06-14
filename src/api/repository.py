@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from queue import Queue
 from threading import Lock
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 from uuid import uuid4
 
 from ..claims import ClaimExtractor, ClaimVerifier, EvidenceInput
@@ -58,6 +58,81 @@ class EventSubscription:
     session_id: str
     replay_events: list[Event]
     queue: Queue[Event]
+
+
+class ProductRepository(Protocol):
+    """Repository contract required by the product API routes."""
+
+    def create_project(self, payload: ProjectCreate) -> Project: ...
+
+    def list_projects(self) -> list[Project]: ...
+
+    def get_project(self, project_id: str) -> Project: ...
+
+    def create_session(self, payload: SessionCreate) -> ResearchSession: ...
+
+    def list_sessions(self) -> list[ResearchSession]: ...
+
+    def get_session(self, session_id: str) -> ResearchSession: ...
+
+    def get_session_snapshot(self, session_id: str) -> SessionSnapshot: ...
+
+    def get_runtime_loop_binding(self, session_id: str) -> RuntimeLoopBinding: ...
+
+    def set_session_status(
+        self,
+        session_id: str,
+        status: SessionStatus,
+        event_type: str,
+    ) -> ResearchSession: ...
+
+    def list_branches(self, session_id: str) -> list[Branch]: ...
+
+    def get_branch(self, branch_id: str) -> Branch: ...
+
+    def continue_branch(self, branch_id: str) -> Branch: ...
+
+    def split_branch(
+        self,
+        branch_id: str,
+        branch_payloads: list[BranchCreate],
+    ) -> list[Branch]: ...
+
+    def prune_branch(self, branch_id: str) -> Branch: ...
+
+    def update_branch(self, branch_id: str, payload: BranchPatch) -> Branch: ...
+
+    def list_papers(self, session_id: str) -> list[Paper]: ...
+
+    def get_paper(self, paper_id: str) -> Paper: ...
+
+    def extract_claims(
+        self,
+        session_id: str,
+        payload: ClaimExtractionRequest,
+    ) -> list[Claim]: ...
+
+    def list_claims(self, session_id: str) -> list[Claim]: ...
+
+    def get_claim(self, claim_id: str) -> Claim: ...
+
+    def validate_claim(
+        self,
+        claim_id: str,
+        payload: ClaimValidationRequest,
+    ) -> ClaimValidationResult: ...
+
+    def list_claim_evidence(self, claim_id: str) -> list[ClaimEvidence]: ...
+
+    def list_events(self, session_id: str) -> list[Event]: ...
+
+    def subscribe_events(
+        self,
+        session_id: str,
+        replay_existing: bool = True,
+    ) -> EventSubscription: ...
+
+    def unsubscribe_events(self, subscription: EventSubscription) -> None: ...
 
 
 def utc_now() -> datetime:
