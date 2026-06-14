@@ -88,7 +88,7 @@ Do not rewrite the existing `src` package before the product API and dashboard e
 
 Do not treat the current `viewer/` or `convex/` prototype structure as the final frontend, API, or persistence boundary. Migrate or replace those pieces deliberately once the product API and durable state model are established.
 
-The current dashboard shell lives in `viewer/` so it can build against the existing Vite/React setup. The target frontend architecture remains open until the project decides whether to migrate that shell to Next.js under `apps/web` or standardize on the existing viewer stack.
+The current dashboard shell lives in `viewer/` so it can build against the existing Vite/React setup. It includes selectable branch and paper inspector states for the dashboard MVP prototype. The target frontend architecture remains open until the project decides whether to migrate that shell to Next.js under `apps/web` or standardize on the existing viewer stack.
 
 ## 4. Runtime boundaries
 

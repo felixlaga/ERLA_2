@@ -4,6 +4,10 @@ import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 
 type DashboardTab = "tree" | "papers" | "claims" | "events";
+type InspectorTarget =
+  | { type: "branch"; id: string }
+  | { type: "paper"; id: string }
+  | { type: "session" };
 
 interface DashboardShellProps {
   onOpenSessionGraph: (id: Id<"sessions">) => void;
@@ -17,6 +21,35 @@ interface SessionSummary {
   updatedAt: number;
 }
 
+interface BranchRow {
+  id: string;
+  label: string;
+  query: string;
+  status: string;
+  mode: string;
+  papers: number;
+  claims: number;
+  contextTokens: string;
+  parent: string;
+  rationale: string;
+  nextAction: string;
+  evidenceCoverage: string;
+}
+
+interface PaperRow {
+  id: string;
+  title: string;
+  year: string;
+  venue: string;
+  status: string;
+  claims: number;
+  citations: number;
+  branchId: string;
+  evidenceStatus: string;
+  selectedReason: string;
+  summary: string;
+}
+
 const projectStats = [
   { label: "Sessions", value: "3", tone: "text-sky-300" },
   { label: "Papers", value: "128", tone: "text-emerald-300" },
@@ -26,45 +59,96 @@ const projectStats = [
 
 const branchRows = [
   {
+    id: "branch-root",
     label: "Root landscape scan",
+    query: "evidence-grounded research navigation",
     status: "running",
+    mode: "search_summarize",
     papers: 34,
+    claims: 92,
+    contextTokens: "42k / 128k",
+    parent: "None",
     rationale: "Broad coverage for methods, datasets, and recent surveys.",
+    nextAction: "Continue citation expansion until coverage stabilizes.",
+    evidenceCoverage: "71%",
   },
   {
+    id: "branch-foundations",
     label: "Foundational methods",
+    query: "citation graph methods for literature discovery",
     status: "completed",
+    mode: "search_summarize",
     papers: 42,
+    claims: 138,
+    contextTokens: "64k / 128k",
+    parent: "Root landscape scan",
     rationale: "Trace high-impact methods and citation ancestors.",
+    nextAction: "Preserve as reference branch for synthesis.",
+    evidenceCoverage: "84%",
   },
   {
+    id: "branch-weak-evidence",
     label: "Weak evidence clusters",
+    query: "unsupported claims in scientific literature summaries",
     status: "pending",
+    mode: "gap_analysis",
     papers: 12,
+    claims: 31,
+    contextTokens: "9k / 128k",
+    parent: "Root landscape scan",
     rationale: "Separate claims that need full-text verification.",
+    nextAction: "Fetch full text before promoting branch claims.",
+    evidenceCoverage: "38%",
   },
-];
+] satisfies BranchRow[];
 
 const paperRows = [
   {
+    id: "paper-grounded-exploration",
     title: "Survey of Evidence-Grounded Literature Exploration",
     year: "2025",
+    venue: "Journal of Research Interfaces",
     status: "validated",
     claims: 18,
+    citations: 42,
+    branchId: "branch-root",
+    evidenceStatus: "abstract + full text",
+    selectedReason:
+      "Recent survey connecting literature maps, evidence panes, and grounded summaries.",
+    summary:
+      "Useful as a framing paper for dashboard workflows and evidence-preserving navigation.",
   },
   {
+    id: "paper-citation-graphs",
     title: "Citation Graphs for Research Navigation",
     year: "2024",
+    venue: "Proceedings of Knowledge Discovery",
     status: "partial",
     claims: 11,
+    citations: 87,
+    branchId: "branch-foundations",
+    evidenceStatus: "abstract only",
+    selectedReason:
+      "Anchors graph traversal patterns and foundational/recent paper distinction.",
+    summary:
+      "Strong citation topology coverage, but needs full-text validation before synthesis.",
   },
   {
+    id: "paper-claim-verification",
     title: "Claim Verification in Scientific Summaries",
     year: "2023",
+    venue: "Evidence and Language Systems",
     status: "needs review",
     claims: 23,
+    citations: 65,
+    branchId: "branch-weak-evidence",
+    evidenceStatus: "verification pending",
+    selectedReason:
+      "Directly informs claim-level validation and unsupported-claim handling.",
+    summary:
+      "Promising for validation design; current branch should inspect evidence passages first.",
   },
-];
+] satisfies PaperRow[];
 
 const claimRows = [
   {
@@ -114,9 +198,179 @@ function formatDate(timestamp?: number): string {
   });
 }
 
+function InspectorMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-md border border-zinc-800 bg-zinc-900 p-2">
+      <dt className="text-zinc-500">{label}</dt>
+      <dd className="mt-1 text-zinc-200">{value}</dd>
+    </div>
+  );
+}
+
+function renderInspector(
+  selectedBranch: BranchRow | null,
+  selectedPaper: PaperRow | null,
+  latestSession: SessionSummary | null
+) {
+  if (selectedPaper) {
+    const sourceBranch = branchRows.find(
+      (branch) => branch.id === selectedPaper.branchId
+    );
+
+    return (
+      <div className="space-y-4 p-4">
+        <div>
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm font-medium leading-5 text-zinc-100">
+              {selectedPaper.title}
+            </p>
+            <span
+              className={`shrink-0 rounded border px-2 py-0.5 text-xs ${statusClass(selectedPaper.status)}`}
+            >
+              {selectedPaper.status}
+            </span>
+          </div>
+          <p className="mt-2 text-xs text-zinc-500">
+            {selectedPaper.venue} / {selectedPaper.year}
+          </p>
+        </div>
+
+        <dl className="grid grid-cols-2 gap-2 text-xs">
+          <InspectorMetric label="Claims" value={selectedPaper.claims} />
+          <InspectorMetric label="Citations" value={selectedPaper.citations} />
+          <InspectorMetric
+            label="Evidence"
+            value={selectedPaper.evidenceStatus}
+          />
+          <InspectorMetric
+            label="Branch"
+            value={sourceBranch?.label ?? "Unassigned"}
+          />
+        </dl>
+
+        <div className="rounded-md border border-zinc-800 bg-zinc-900 p-3">
+          <p className="text-xs font-medium uppercase text-zinc-500">
+            Selection Reason
+          </p>
+          <p className="mt-2 text-sm leading-5 text-zinc-300">
+            {selectedPaper.selectedReason}
+          </p>
+        </div>
+
+        <div className="rounded-md border border-zinc-800 bg-zinc-900 p-3">
+          <p className="text-xs font-medium uppercase text-zinc-500">
+            Evidence Summary
+          </p>
+          <p className="mt-2 text-sm leading-5 text-zinc-300">
+            {selectedPaper.summary}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedBranch) {
+    const relatedPapers = paperRows.filter(
+      (paper) => paper.branchId === selectedBranch.id
+    );
+
+    return (
+      <div className="space-y-4 p-4">
+        <div>
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm font-medium leading-5 text-zinc-100">
+              {selectedBranch.label}
+            </p>
+            <span
+              className={`shrink-0 rounded border px-2 py-0.5 text-xs ${statusClass(selectedBranch.status)}`}
+            >
+              {selectedBranch.status}
+            </span>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-zinc-500">
+            {selectedBranch.query}
+          </p>
+        </div>
+
+        <dl className="grid grid-cols-2 gap-2 text-xs">
+          <InspectorMetric label="Mode" value={selectedBranch.mode} />
+          <InspectorMetric label="Parent" value={selectedBranch.parent} />
+          <InspectorMetric label="Papers" value={selectedBranch.papers} />
+          <InspectorMetric label="Claims" value={selectedBranch.claims} />
+          <InspectorMetric label="Context" value={selectedBranch.contextTokens} />
+          <InspectorMetric
+            label="Evidence"
+            value={selectedBranch.evidenceCoverage}
+          />
+        </dl>
+
+        <div className="rounded-md border border-zinc-800 bg-zinc-900 p-3">
+          <p className="text-xs font-medium uppercase text-zinc-500">Rationale</p>
+          <p className="mt-2 text-sm leading-5 text-zinc-300">
+            {selectedBranch.rationale}
+          </p>
+        </div>
+
+        <div className="rounded-md border border-zinc-800 bg-zinc-900 p-3">
+          <p className="text-xs font-medium uppercase text-zinc-500">
+            Next Action
+          </p>
+          <p className="mt-2 text-sm leading-5 text-zinc-300">
+            {selectedBranch.nextAction}
+          </p>
+        </div>
+
+        <div className="rounded-md border border-zinc-800 bg-zinc-900 p-3">
+          <p className="text-xs font-medium uppercase text-zinc-500">
+            Branch Papers
+          </p>
+          <div className="mt-2 space-y-2">
+            {relatedPapers.map((paper) => (
+              <div key={paper.id} className="text-sm leading-5 text-zinc-300">
+                {paper.title}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 p-4">
+      <div>
+        <p className="text-xs font-medium uppercase text-zinc-500">Session</p>
+        <p className="mt-2 text-sm font-medium text-zinc-100">
+          {latestSession?.initialQuery ?? "No replay session selected"}
+        </p>
+        <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+          <InspectorMetric
+            label="Status"
+            value={latestSession?.status ?? "pending"}
+          />
+          <InspectorMetric
+            label="Updated"
+            value={formatDate(latestSession?.updatedAt)}
+          />
+        </dl>
+      </div>
+    </div>
+  );
+}
+
 export function DashboardShell({ onOpenSessionGraph }: DashboardShellProps) {
   const sessions = useQuery(api.sessions.list);
   const [activeTab, setActiveTab] = useState<DashboardTab>("tree");
+  const [inspectorTarget, setInspectorTarget] = useState<InspectorTarget>({
+    type: "branch",
+    id: branchRows[0].id,
+  });
   const [query, setQuery] = useState("");
 
   const latestSession = useMemo(() => {
@@ -125,6 +379,24 @@ export function DashboardShell({ onOpenSessionGraph }: DashboardShellProps) {
   }, [sessions]);
 
   const sessionCount = sessions?.length ?? 0;
+  const selectedBranch =
+    inspectorTarget.type === "branch"
+      ? branchRows.find((branch) => branch.id === inspectorTarget.id) ?? null
+      : null;
+  const selectedPaper =
+    inspectorTarget.type === "paper"
+      ? paperRows.find((paper) => paper.id === inspectorTarget.id) ?? null
+      : null;
+
+  const handleTabChange = (value: DashboardTab) => {
+    setActiveTab(value);
+    if (value === "tree" && inspectorTarget.type !== "branch") {
+      setInspectorTarget({ type: "branch", id: branchRows[0].id });
+    }
+    if (value === "papers" && inspectorTarget.type !== "paper") {
+      setInspectorTarget({ type: "paper", id: paperRows[0].id });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -253,7 +525,7 @@ export function DashboardShell({ onOpenSessionGraph }: DashboardShellProps) {
                   ].map(([value, label]) => (
                     <button
                       key={value}
-                      onClick={() => setActiveTab(value as DashboardTab)}
+                      onClick={() => handleTabChange(value as DashboardTab)}
                       className={`h-8 rounded-md px-3 text-sm ${
                         activeTab === value
                           ? "bg-zinc-800 text-white"
@@ -267,63 +539,31 @@ export function DashboardShell({ onOpenSessionGraph }: DashboardShellProps) {
               </div>
 
               <div className="p-5">
-                {renderCenterPanel(activeTab, latestSession, onOpenSessionGraph)}
+                {renderCenterPanel(
+                  activeTab,
+                  latestSession,
+                  onOpenSessionGraph,
+                  inspectorTarget,
+                  setInspectorTarget
+                )}
               </div>
             </div>
 
             <aside className="border-t border-zinc-800 bg-zinc-950 lg:border-l lg:border-t-0">
               <div className="border-b border-zinc-800 p-4">
-                <p className="text-sm font-medium text-zinc-100">Inspector</p>
+                <p className="text-sm font-medium text-zinc-100">
+                  {selectedPaper
+                    ? "Paper Inspector"
+                    : selectedBranch
+                      ? "Branch Inspector"
+                      : "Session Inspector"}
+                </p>
                 <p className="mt-1 text-xs text-zinc-500">
-                  Selected branch, paper, claim, or hypothesis.
+                  Evidence, status, and next action.
                 </p>
               </div>
 
-              <div className="space-y-4 p-4">
-                <div>
-                  <p className="text-xs font-medium uppercase text-zinc-500">
-                    Session
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-zinc-100">
-                    {latestSession?.initialQuery ?? "No replay session selected"}
-                  </p>
-                  <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-md border border-zinc-800 bg-zinc-900 p-2">
-                      <dt className="text-zinc-500">Status</dt>
-                      <dd className="mt-1 capitalize text-zinc-200">
-                        {latestSession?.status ?? "pending"}
-                      </dd>
-                    </div>
-                    <div className="rounded-md border border-zinc-800 bg-zinc-900 p-2">
-                      <dt className="text-zinc-500">Updated</dt>
-                      <dd className="mt-1 text-zinc-200">
-                        {formatDate(latestSession?.updatedAt)}
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
-
-                <div>
-                  <p className="text-xs font-medium uppercase text-zinc-500">
-                    Validation Trace
-                  </p>
-                  <div className="mt-2 space-y-2">
-                    {["Summary groundedness", "Claim extraction", "Evidence ledger"].map(
-                      (item, index) => (
-                        <div
-                          key={item}
-                          className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs"
-                        >
-                          <span className="text-zinc-300">{item}</span>
-                          <span className={index === 0 ? "text-emerald-300" : "text-zinc-500"}>
-                            {index === 0 ? "ready" : "queued"}
-                          </span>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
-              </div>
+              {renderInspector(selectedBranch, selectedPaper, latestSession)}
             </aside>
           </section>
 
@@ -380,7 +620,9 @@ export function DashboardShell({ onOpenSessionGraph }: DashboardShellProps) {
 function renderCenterPanel(
   activeTab: DashboardTab,
   latestSession: SessionSummary | null,
-  onOpenSessionGraph: (id: Id<"sessions">) => void
+  onOpenSessionGraph: (id: Id<"sessions">) => void,
+  inspectorTarget: InspectorTarget,
+  setInspectorTarget: (target: InspectorTarget) => void
 ) {
   if (activeTab === "tree") {
     return (
@@ -401,9 +643,17 @@ function renderCenterPanel(
         </div>
         <div className="grid gap-3 lg:grid-cols-3">
           {branchRows.map((branch) => (
-            <div
+            <button
               key={branch.label}
-              className="min-h-40 rounded-md border border-zinc-800 bg-zinc-900 p-4"
+              onClick={() => setInspectorTarget({ type: "branch", id: branch.id })}
+              aria-pressed={
+                inspectorTarget.type === "branch" && inspectorTarget.id === branch.id
+              }
+              className={`min-h-44 rounded-md border p-4 text-left transition ${
+                inspectorTarget.type === "branch" && inspectorTarget.id === branch.id
+                  ? "border-sky-500 bg-zinc-900 ring-1 ring-sky-900"
+                  : "border-zinc-800 bg-zinc-900 hover:border-zinc-600"
+              }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <p className="text-sm font-medium text-zinc-100">{branch.label}</p>
@@ -412,8 +662,13 @@ function renderCenterPanel(
                 </span>
               </div>
               <p className="mt-3 text-xs leading-5 text-zinc-500">{branch.rationale}</p>
-              <p className="mt-4 text-xs text-zinc-400">{branch.papers} papers</p>
-            </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-zinc-400">
+                <span>{branch.papers} papers</span>
+                <span>{branch.claims} claims</span>
+                <span>{branch.mode}</span>
+                <span>{branch.evidenceCoverage} covered</span>
+              </div>
+            </button>
           ))}
         </div>
       </div>
@@ -424,17 +679,28 @@ function renderCenterPanel(
     return (
       <div className="overflow-hidden rounded-md border border-zinc-800">
         {paperRows.map((paper) => (
-          <div
+          <button
             key={paper.title}
-            className="grid grid-cols-1 gap-2 border-b border-zinc-800 bg-zinc-900 px-4 py-3 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_90px_120px_90px] sm:items-center sm:gap-3"
+            onClick={() => setInspectorTarget({ type: "paper", id: paper.id })}
+            aria-pressed={
+              inspectorTarget.type === "paper" && inspectorTarget.id === paper.id
+            }
+            className={`grid w-full grid-cols-1 gap-2 border-b px-4 py-3 text-left transition last:border-b-0 sm:grid-cols-[minmax(0,1fr)_90px_120px_90px] sm:items-center sm:gap-3 ${
+              inspectorTarget.type === "paper" && inspectorTarget.id === paper.id
+                ? "border-sky-800 bg-sky-950/30"
+                : "border-zinc-800 bg-zinc-900 hover:bg-zinc-800"
+            }`}
           >
-            <p className="truncate text-sm text-zinc-100">{paper.title}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm text-zinc-100">{paper.title}</p>
+              <p className="mt-1 truncate text-xs text-zinc-500">{paper.venue}</p>
+            </div>
             <p className="text-sm text-zinc-400">{paper.year}</p>
             <span className={`w-fit rounded border px-2 py-0.5 text-xs ${statusClass(paper.status)}`}>
               {paper.status}
             </span>
             <p className="text-sm text-zinc-400 sm:text-right">{paper.claims} claims</p>
-          </div>
+          </button>
         ))}
       </div>
     );

@@ -19,7 +19,7 @@ Implemented or partially implemented:
 - Recursive research orchestration with Inner Loop, Iteration Loop, Branch Manager, Master Agent, Managing Agent, Reflection Agent, and Hypothesis generation.
 - FastAPI product API skeleton under `src/api` with a temporary in-memory repository, runtime research-loop binding, and process-local event streaming.
 - Initial Postgres product schema migration under `migrations/`.
-- Frontend dashboard shell in the Vite/React `viewer/` prototype.
+- Frontend dashboard shell in the Vite/React `viewer/` prototype with selectable branch and paper inspectors.
 - Convex event emission client for realtime visualization.
 - Convex schema/functions under `convex/` for prototype session replay state.
 - Vite/React viewer under `viewer/` for prototype graph, event, and chat exploration.
@@ -212,15 +212,15 @@ For production, move heavy validation to a separately deployed service with batc
 
 ## Development direction
 
-The next engineering milestone is a web dashboard MVP. With the API skeleton, initial schema migration, prototype dashboard shell, session-to-loop binding, and process-local event streaming in place, remaining work is inspector UI, durable state wiring, real job execution, and the final frontend architecture:
+The next engineering milestone is a web dashboard MVP. With the API skeleton, initial schema migration, prototype dashboard shell, session-to-loop binding, process-local event streaming, and selectable branch/paper inspectors in place, remaining work is claim extraction, durable state wiring, real job execution, and the final frontend architecture:
 
-1. Add paper and branch inspectors.
-2. Replace the in-memory API repository with durable repositories.
-3. Add background worker queue.
-4. Decide whether to migrate the dashboard shell to Next.js under `apps/web` or formalize the existing `viewer/`.
-5. Connect session execution to the existing `MasterAgent` orchestration through workers.
-6. Add branch tree and richer event log interactions.
-7. Add claim extraction and claim evidence ledger.
+1. Add claim extraction.
+2. Add claim validation and claim evidence ledger.
+3. Replace the in-memory API repository with durable repositories.
+4. Add background worker queue.
+5. Decide whether to migrate the dashboard shell to Next.js under `apps/web` or formalize the existing `viewer/`.
+6. Connect session execution to the existing `MasterAgent` orchestration through workers.
+7. Add branch tree and richer event log interactions.
 
 ## Source-of-truth docs
 

@@ -33,7 +33,7 @@ This repo currently has:
 - Session creation is wired to a lightweight runtime `LoopState` and root branch through `src/api/research_loop.py`.
 - Process-local server-sent event streaming is available at `GET /sessions/{session_id}/events/stream`.
 - Initial Postgres product schema migration in `migrations/`.
-- Prototype dashboard shell in `viewer/`.
+- Prototype dashboard shell in `viewer/` with selectable branch and paper inspectors.
 - Config profiles in `src/config/models.yaml`.
 - Semantic Scholar provider.
 - arXiv provider.
